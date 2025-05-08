@@ -19,40 +19,24 @@
             <template v-for="(dayName, dayIndex) in days">
               <tr v-for="period in 5" :key="`${dayIndex}-${period}`">
                 <!-- Cột "Thứ" và số tiết -->
-                <td
-                  v-if="period === 1"
-                  :rowspan="5"
-                  class="align-middle bg-light font-weight-bold"
-                  style="text-align: center"
-                >
+                <td v-if="period === 1" :rowspan="5" class="align-middle bg-light font-weight-bold"
+                  style="text-align: center">
                   {{ dayName }}
                 </td>
                 <td class="text-center">{{ period }}</td>
 
                 <!-- Các cột cho tiết sáng -->
                 <td v-for="cls in classes" :key="'m_' + cls + '_' + period">
-                  <div
-                    draggable="true"
-                    @dragstart="onDragStart(dayName, 'morning', period, cls)"
-                    @dragover.prevent
-                    @drop="onDrop(dayName, 'morning', period, cls)"
-                    class="p-1"
-                    style="min-height: 40px"
-                  >
+                  <div draggable="true" @dragstart="onDragStart(dayName, 'morning', period, cls)" @dragover.prevent
+                    @drop="onDrop(dayName, 'morning', period, cls)" class="p-1" style="min-height: 40px">
                     {{ schedule[dayName]?.morning?.[period]?.[cls] || "" }}
                   </div>
                 </td>
 
                 <!-- Các cột cho tiết chiều -->
                 <td v-for="cls in classes" :key="'a_' + cls + '_' + period">
-                  <div
-                    draggable="true"
-                    @dragstart="onDragStart(dayName, 'afternoon', period, cls)"
-                    @dragover.prevent
-                    @drop="onDrop(dayName, 'afternoon', period, cls)"
-                    class="p-1"
-                    style="min-height: 40px"
-                  >
+                  <div draggable="true" @dragstart="onDragStart(dayName, 'afternoon', period, cls)" @dragover.prevent
+                    @drop="onDrop(dayName, 'afternoon', period, cls)" class="p-1" style="min-height: 40px">
                     {{ schedule[dayName]?.afternoon?.[period]?.[cls] || "" }}
                   </div>
                 </td>
@@ -74,7 +58,7 @@ export default {
     return {
       days: ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6"],
       classes: ["1A", "1B", "1C", "2A", "2B", "2C"],
-      schedule: getSchedule(), // lấy từ hàm
+      schedule: getSchedule(),
       dragData: null,
     };
   },
@@ -85,20 +69,26 @@ export default {
     onDrop(day, session, period, cls) {
       if (!this.dragData) return;
 
-      const from = this.dragData;
-      const to = { day, session, period, cls };
+      const { day: fromDay, session: fromSession, period: fromPeriod, cls: fromCls } = this.dragData;
 
-      const fromVal =
-        this.schedule[from.day]?.[from.session]?.[from.period]?.[from.cls] || "";
-      const toVal = this.schedule[to.day]?.[to.session]?.[to.period]?.[to.cls] || "";
+      const fromVal = this.schedule[fromDay]?.[fromSession]?.[fromPeriod]?.[fromCls] || "";
+      const toVal = this.schedule[day]?.[session]?.[period]?.[cls] || "";
 
-      // Hoán đổi
-      this.$set(this.schedule[from.day][from.session][from.period], from.cls, toVal);
-      this.$set(this.schedule[to.day][to.session][to.period], to.cls, fromVal);
+      this.updateLesson(fromDay, fromSession, fromPeriod, fromCls, toVal);
+      this.updateLesson(day, session, period, cls, fromVal);
 
       this.dragData = null;
-
-      saveSchedule(this.schedule); // lưu lại
+    },
+    updateLesson(day, session, period, cls, value) {
+      if (!this.schedule[day]) this.$set(this.schedule, day, {});
+      if (!this.schedule[day][session]) this.$set(this.schedule[day], session, {});
+      if (!this.schedule[day][session][period]) this.$set(this.schedule[day][session], period, {});
+      this.$set(this.schedule[day][session][period], cls, value);
+      saveSchedule(this.schedule);
+    },
+    resetSchedule() {
+      localStorage.removeItem("savedSchedule");
+      this.schedule = getSchedule(); // reset lại dữ liệu gốc
     },
   },
 };
@@ -106,8 +96,8 @@ export default {
 
 <style scoped>
 .table {
-  table-layout: fixed;
-  width: 100%;
+  table-layout: auto;
+  width: auto;
 }
 
 .table th,
@@ -116,8 +106,12 @@ export default {
   border: 1px solid #dee2e6;
   font-size: 14px;
   padding: 0.5rem;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
+  min-width: 100px;
+  max-width: 200px;
 }
+
 
 .table thead th {
   background-color: #f0f8ff;
