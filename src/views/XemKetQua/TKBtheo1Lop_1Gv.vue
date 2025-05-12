@@ -44,12 +44,30 @@
 
               <!-- Tiết sáng -->
               <td v-for="i in 5" :key="'s_' + index + '_' + i">
-                {{ getLesson(day, "morning", i) }}
+                <div
+                  draggable="true"
+                  @dragstart="onDragStart(day, 'morning', i, selectedClass)"
+                  @dragover.prevent
+                  @drop="onDrop(day, 'morning', i, selectedClass)"
+                  class="p-1"
+                  style="min-height: 40px"
+                >
+                  {{ getLesson(day, "morning", i) }}
+                </div>
               </td>
 
               <!-- Tiết chiều -->
               <td v-for="i in 5" :key="'c_' + index + '_' + i">
-                {{ getLesson(day, "afternoon", i) }}
+                <div
+                  draggable="true"
+                  @dragstart="onDragStart(day, 'afternoon', i, selectedClass)"
+                  @dragover.prevent
+                  @drop="onDrop(day, 'afternoon', i, selectedClass)"
+                  class="p-1"
+                  style="min-height: 40px"
+                >
+                  {{ getLesson(day, "afternoon", i) }}
+                </div>
               </td>
             </tr>
           </tbody>
@@ -63,23 +81,100 @@
 </template>
 
 <script>
-import { getSchedule } from "@/data/sharedSchedule";
+import { getSchedule, saveSchedule } from "@/data/sharedSchedule";
+import toastr from "toastr";
+import "toastr/build/toastr.min.css";
 
 export default {
   data() {
     return {
-      schedule: getSchedule(), // dùng chung dữ liệu
+      schedule: getSchedule(),
       selectedClass: "",
       selectedTeacher: "",
       classes: ["1A", "1B", "1C", "2A", "2B", "2C"],
       teachers: ["GV A", "GV B", "GV C", "GV D", "GV E", "GV F", "GV G", "GV H"],
       days: ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6"],
+      dragData: null,
     };
   },
   methods: {
+    // Hàm lấy tiết học từ dữ liệu
     getLesson(day, session, period) {
       const value = this.schedule[day]?.[session]?.[period]?.[this.selectedClass] || "";
-      return value.includes(this.selectedTeacher) ? value : "";
+      if (value && value.includes(this.selectedTeacher)) {
+        return value;
+      }
+      return "";
+    },
+
+    // Hàm xử lý khi kéo bắt đầu
+    onDragStart(day, session, period, cls) {
+      this.dragData = { day, session, period, cls };
+    },
+
+    // Hàm xử lý khi thả tiết học
+    onDrop(day, session, period, cls) {
+      if (!this.dragData) return;
+
+      const {
+        day: fromDay,
+        session: fromSession,
+        period: fromPeriod,
+        cls: fromCls,
+      } = this.dragData;
+
+      if (fromCls !== cls) return;
+
+      const fromVal =
+        this.schedule[fromDay]?.[fromSession]?.[fromPeriod]?.[fromCls] || "";
+      const toVal = this.schedule[day]?.[session]?.[period]?.[cls] || "";
+
+      // Trích xuất thông tin giáo viên và môn học
+      const {
+        subject: fromSubject,
+        teacher: fromTeacher,
+      } = this.extractSubjectAndTeacher(fromVal);
+      const { subject: toSubject, teacher: toTeacher } = this.extractSubjectAndTeacher(
+        toVal
+      );
+
+      // Nếu có sự thay đổi giữa các tiết học
+      if (toVal && fromTeacher && toTeacher && fromTeacher !== toTeacher) {
+        toastr.warning(
+          `Đang thay tiết ${fromSubject} - ${fromTeacher} bằng tiết ${toSubject} - ${toTeacher}`,
+          "Cảnh báo"
+        );
+      }
+
+      // Cập nhật tiết học
+      this.updateLesson(fromDay, fromSession, fromPeriod, fromCls, toVal);
+      this.updateLesson(day, session, period, cls, fromVal);
+
+      this.dragData = null;
+    },
+
+    // Hàm cập nhật tiết học
+    updateLesson(day, session, period, cls, value) {
+      if (!this.schedule[day]) this.$set(this.schedule, day, {});
+      if (!this.schedule[day][session]) this.$set(this.schedule[day], session, {});
+      if (!this.schedule[day][session][period])
+        this.$set(this.schedule[day][session], period, {});
+      this.$set(this.schedule[day][session][period], cls, value);
+      saveSchedule(this.schedule);
+    },
+
+    // Hàm trích xuất môn học và giáo viên từ chuỗi
+    extractSubjectAndTeacher(val) {
+      const parts = val.split(" - ");
+      return {
+        subject: parts[0] || "Môn học chưa xác định",
+        teacher: parts[1] || "Giáo viên chưa xác định",
+      };
+    },
+
+    resetSchedule() {
+      localStorage.removeItem("savedSchedule");
+      this.schedule = getSchedule();
     },
   },
 };

@@ -65,6 +65,8 @@
 </template>
 
 <script>
+// Import Toastr
+import toastr from "toastr";
 import { getSchedule, saveSchedule } from "@/data/sharedSchedule";
 
 export default {
@@ -76,6 +78,17 @@ export default {
       schedule: getSchedule(),
       dragData: null,
     };
+  },
+  mounted() {
+    // Cấu hình toastr khi component được tạo
+    if (typeof toastr !== "undefined") {
+      toastr.options = {
+        closeButton: true,
+        progressBar: true,
+        timeOut: 2000,
+        positionClass: "toast-bottom-right",
+      };
+    }
   },
   methods: {
     onDragStart(day, session, period, cls) {
@@ -90,6 +103,13 @@ export default {
         period: fromPeriod,
         cls: fromCls,
       } = this.dragData;
+
+      // Nếu khác lớp thì hiện thông báo và huỷ thao tác
+      if (fromCls !== cls) {
+        toastr.warning("Chỉ được di chuyển trong cùng một lớp!");
+        this.dragData = null;
+        return;
+      }
 
       const fromVal =
         this.schedule[fromDay]?.[fromSession]?.[fromPeriod]?.[fromCls] || "";

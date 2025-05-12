@@ -30,4 +30,32 @@ export default {
   },
 };
 </script>
-<style></style>
+<style scoped>
+button.btn {
+  margin-bottom: 10px;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+button.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+}
+
+button.btn-primary {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+}
+
+button.btn-primary:hover {
+  background-color: #0b5ed7;
+  border-color: #0a58ca;
+}
+
+button.btn-outline-primary:hover {
+  background-color: #0d6efd;
+  color: white;
+}
+</style>

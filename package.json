@@ -10,6 +10,7 @@
   "dependencies": {
     "babel-loader": "^10.0.0",
     "core-js": "^3.8.3",
+    "toastr": "^2.1.4",
     "vue": "^2.6.10",
     "vue-loader": "^17.4.2",
     "vue-router": "^3.6.5",
