@@ -81,38 +81,40 @@
 </template>
 
 <script>
-import { getSchedule, saveSchedule } from "@/data/sharedSchedule";
+import scheduleStore from "@/stores/scheduleStore"; // import store
 import toastr from "toastr";
 import "toastr/build/toastr.min.css";
 
 export default {
   data() {
     return {
-      schedule: getSchedule(),
       selectedClass: "",
       selectedTeacher: "",
       classes: ["1A", "1B", "1C", "2A", "2B", "2C"],
       teachers: ["GV A", "GV B", "GV C", "GV D", "GV E", "GV F", "GV G", "GV H"],
       days: ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6"],
       dragData: null,
+      schedule: scheduleStore.schedule, // lấy từ store, để reactive
     };
   },
   methods: {
-    // Hàm lấy tiết học từ dữ liệu
     getLesson(day, session, period) {
-      const value = this.schedule[day]?.[session]?.[period]?.[this.selectedClass] || "";
-      if (value && value.includes(this.selectedTeacher)) {
-        return value;
+      // Lấy lesson object từ store
+      const lessonObj =
+        scheduleStore.schedule?.[day]?.[session]?.[period]?.[this.selectedClass];
+      if (!lessonObj) return "";
+
+      // Chỉ hiển thị nếu giáo viên trùng với lựa chọn
+      if (lessonObj.teacher === this.selectedTeacher) {
+        return lessonObj.subject; // Chỉ trả về môn học
       }
       return "";
     },
 
-    // Hàm xử lý khi kéo bắt đầu
     onDragStart(day, session, period, cls) {
       this.dragData = { day, session, period, cls };
     },
 
-    // Hàm xử lý khi thả tiết học
     onDrop(day, session, period, cls) {
       if (!this.dragData) return;
 
@@ -123,58 +125,41 @@ export default {
         cls: fromCls,
       } = this.dragData;
 
-      if (fromCls !== cls) return;
+      if (fromCls !== cls) {
+        this.dragData = null;
+        return;
+      }
 
       const fromVal =
-        this.schedule[fromDay]?.[fromSession]?.[fromPeriod]?.[fromCls] || "";
-      const toVal = this.schedule[day]?.[session]?.[period]?.[cls] || "";
+        scheduleStore.schedule?.[fromDay]?.[fromSession]?.[fromPeriod]?.[fromCls] || null;
+      const toVal = scheduleStore.schedule?.[day]?.[session]?.[period]?.[cls] || null;
 
-      // Trích xuất thông tin giáo viên và môn học
-      const {
-        subject: fromSubject,
-        teacher: fromTeacher,
-      } = this.extractSubjectAndTeacher(fromVal);
-      const { subject: toSubject, teacher: toTeacher } = this.extractSubjectAndTeacher(
-        toVal
-      );
+      if (!fromVal) {
+        this.dragData = null;
+        return;
+      }
 
-      // Nếu có sự thay đổi giữa các tiết học
-      if (toVal && fromTeacher && toTeacher && fromTeacher !== toTeacher) {
+      if (
+        toVal &&
+        fromVal.teacher &&
+        toVal.teacher &&
+        fromVal.teacher !== toVal.teacher
+      ) {
         toastr.warning(
-          `Đang thay tiết ${fromSubject} - ${fromTeacher} bằng tiết ${toSubject} - ${toTeacher}`,
+          `Đang thay tiết ${fromVal.subject} - ${fromVal.teacher} bằng tiết ${toVal.subject} - ${toVal.teacher}`,
           "Cảnh báo"
         );
       }
 
-      // Cập nhật tiết học
-      this.updateLesson(fromDay, fromSession, fromPeriod, fromCls, toVal);
-      this.updateLesson(day, session, period, cls, fromVal);
+      // Cập nhật lại dữ liệu trong scheduleStore
+      scheduleStore.updateLesson(fromDay, fromSession, fromPeriod, fromCls, toVal);
+      scheduleStore.updateLesson(day, session, period, cls, fromVal);
 
       this.dragData = null;
     },
 
-    // Hàm cập nhật tiết học
-    updateLesson(day, session, period, cls, value) {
-      if (!this.schedule[day]) this.$set(this.schedule, day, {});
-      if (!this.schedule[day][session]) this.$set(this.schedule[day], session, {});
-      if (!this.schedule[day][session][period])
-        this.$set(this.schedule[day][session], period, {});
-      this.$set(this.schedule[day][session][period], cls, value);
-      saveSchedule(this.schedule);
-    },
-
-    // Hàm trích xuất môn học và giáo viên từ chuỗi
-    extractSubjectAndTeacher(val) {
-      const parts = val.split(" - ");
-      return {
-        subject: parts[0] || "Môn học chưa xác định",
-        teacher: parts[1] || "Giáo viên chưa xác định",
-      };
-    },
-
     resetSchedule() {
-      localStorage.removeItem("savedSchedule");
-      this.schedule = getSchedule();
+      scheduleStore.reset();
     },
   },
 };
@@ -188,20 +173,40 @@ export default {
 
 .table th,
 .table td {
-  vertical-align: middle;
   border: 1px solid #dee2e6;
   font-size: 14px;
   padding: 0.5rem;
   white-space: nowrap;
+
+  /* Căn giữa ngang và dọc */
+  text-align: center;
+  vertical-align: middle;
+}
+
+.table td > div {
+  /* Căn giữa nội dung trong mỗi tiết */
+  min-height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Căn giữa cột Thứ (colspan=2) */
+.table td[colspan="2"] {
+  text-align: center;
+  vertical-align: middle;
 }
 
 .table thead th {
-  background-color: #f0f8ff;
+  background-color: #b3e9ef;
   font-weight: bold;
   text-align: center;
 }
 
 .text-muted {
   font-style: italic;
+}
+.align-middle {
+  background-color: #dab1a7a1 !important;
 }
 </style>
