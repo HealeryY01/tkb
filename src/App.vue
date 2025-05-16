@@ -31,6 +31,26 @@ body,
 .main-content {
   flex: 1;
   padding: 20px;
-  background-color: #f5f5f5;
+}
+
+/* Ghi đè nếu toastr bị Bootstrap 4 làm mất màu */
+.toast {
+  color: #000 !important; /* Đảm bảo chữ hiển thị rõ */
+}
+
+.toast-success {
+  background-color: #51a351 !important;
+}
+
+.toast-error {
+  background-color: #bd362f !important;
+}
+
+.toast-warning {
+  background-color: #f89406 !important;
+}
+
+.toast-info {
+  background-color: #2f96b4 !important;
 }
 </style>

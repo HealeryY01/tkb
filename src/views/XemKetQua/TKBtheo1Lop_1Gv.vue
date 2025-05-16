@@ -173,7 +173,7 @@ export default {
 
 .table th,
 .table td {
-  border: 1px solid #dee2e6;
+  border: 1px solid #151516;
   font-size: 14px;
   padding: 0.5rem;
   white-space: nowrap;

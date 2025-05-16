@@ -1,21 +1,32 @@
 // src/main.js
 import Vue from "vue";
 import App from "./App.vue";
-import router from "./router"; // Import router
-import toastr from "toastr"; // Import Toastr
-import "toastr/build/toastr.min.css"; // Import CSS của Toastr
+import router from "./router";
 
-Vue.config.productionTip = false;
+// ✅ Import Bootstrap 4 & jQuery
+import "bootstrap";
+import "bootstrap/dist/css/bootstrap.min.css";
+import $ from "jquery";
+window.$ = window.jQuery = $;
+
+// ✅ Import Toastr & CSS
+import toastr from "toastr";
+import "toastr/build/toastr.min.css";
+
 // Cấu hình Toastr
 toastr.options = {
   closeButton: true,
   progressBar: true,
   timeOut: 2000,
-  positionClass: "toast-bottom-right", // Vị trí thông báo
+  positionClass: "toast-bottom-right",
 };
 
-// Tạo và khởi động Vue instance với router
+// Gắn toastr vào Vue prototype (nếu cần dùng this.$toastr)
+Vue.prototype.$toastr = toastr;
+
+Vue.config.productionTip = false;
+
 new Vue({
   render: (h) => h(App),
-  router, // Thêm router vào Vue instance
+  router,
 }).$mount("#app");

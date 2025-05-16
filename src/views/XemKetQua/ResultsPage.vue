@@ -32,6 +32,7 @@ export default {
 </script>
 <style scoped>
 button.btn {
+  margin-left: 10px;
   margin-bottom: 10px;
   border-radius: 0.5rem;
   font-weight: 500;
