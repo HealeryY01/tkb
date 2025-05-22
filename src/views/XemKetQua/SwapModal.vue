@@ -1,21 +1,10 @@
 <template>
-  <div
-    class="modal fade"
-    id="swapModal"
-    tabindex="-1"
-    aria-hidden="true"
-    data-bs-backdrop="static"
-  >
+  <div class="modal fade" id="swapModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-lg">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title">{{ title }}</h5>
-          <button
-            type="button"
-            class="btn-close"
-            @click="cancel"
-            aria-label="Close"
-          ></button>
+          <button type="button" class="btn-close" @click="cancel" aria-label="Close"></button>
         </div>
 
         <div class="modal-body">
@@ -56,12 +45,7 @@
 
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" @click="cancel">Hủy</button>
-          <button
-            type="button"
-            class="btn btn-primary"
-            @click="confirm"
-            :disabled="bothEmpty"
-          >
+          <button type="button" class="btn btn-primary" @click="confirm" :disabled="bothEmpty">
             Xác nhận
           </button>
         </div>
