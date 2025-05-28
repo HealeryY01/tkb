@@ -52,7 +52,7 @@
       </div>
     </div>
 
-    <!-- Modal đổi tiết chuẩn Bootstrap 4 -->
+    <!-- Modal đổi tiết -->
     <div ref="swapModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="swapModalLabel"
       aria-hidden="true">
       <div class="modal-dialog modal-lg" role="document">
@@ -133,6 +133,28 @@
             <button type="button" class="btn btn-primary" @click="confirmSwap">
               Xác nhận
             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Thêm modal thông báo lỗi -->
+    <div ref="errorModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="errorModalLabel"
+      aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header bg-danger text-white">
+            <h5 class="modal-title" id="errorModalLabel">Không thể đổi tiết</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <p>Bạn chỉ có thể đổi các tiết trong cùng một lớp!</p>
+            <p>Không thể đổi tiết giữa các lớp khác nhau.</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Đóng</button>
           </div>
         </div>
       </div>
@@ -274,7 +296,12 @@ export default {
 
     handleDrop(day, session, period, cls) {
       if (!this.dragData) return;
-
+      // Kiểm tra xem có cùng lớp không
+      if (this.dragData.cls.id !== cls.id) {
+        $(this.$refs.errorModal).modal("show");
+        this.dragData = null;
+        return;
+      }
       const targetLesson = this.getLesson(day, session, period, cls);
 
       // Cập nhật swapData để hiển thị modal xác nhận

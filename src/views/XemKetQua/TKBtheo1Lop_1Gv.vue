@@ -8,14 +8,20 @@
         <label>Chọn lớp:</label>
         <select class="form-control" v-model="selectedClass">
           <option disabled value="">-- Chọn lớp --</option>
-          <option v-for="cls in classes" :key="cls" :value="cls">{{ cls }}</option>
+          <optgroup v-for="grade in grades" :key="grade.id" :label="grade.name">
+            <option v-for="cls in grade.classes" :key="cls.id" :value="cls.name">
+              {{ cls.name }}
+            </option>
+          </optgroup>
         </select>
       </div>
       <div class="col-md-4">
         <label>Chọn giáo viên:</label>
         <select class="form-control" v-model="selectedTeacher">
           <option disabled value="">-- Chọn giáo viên --</option>
-          <option v-for="gv in teachers" :key="gv" :value="gv">{{ gv }}</option>
+          <option v-for="teacher in teachers" :key="teacher.id" :value="teacher.name">
+            {{ teacher.name }}
+          </option>
         </select>
       </div>
     </div>
@@ -39,34 +45,24 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(day, index) in days" :key="index">
-              <td colspan="2" class="align-middle">{{ day }}</td>
-
-              <!-- Tiết sáng -->
-              <td v-for="i in 5" :key="'s_' + index + '_' + i">
-                <div
-                  draggable="true"
-                  @dragstart="onDragStart(day, 'morning', i, selectedClass)"
-                  @dragover.prevent
-                  @drop="onDrop(day, 'morning', i, selectedClass)"
-                  class="p-1"
-                  style="min-height: 40px"
-                >
-                  {{ getLesson(day, "morning", i) }}
+            <tr v-for="day in days" :key="day.id">
+              <td colspan="2" class="align-middle">{{ day.name }}</td>
+              <td v-for="i in 5" :key="'s_' + day.id + '_' + i">
+                <div draggable="true" @dragstart="onDragStart(day.id, 'morning', i, selectedClass)" @dragover.prevent="
+                  onDragOver(day.id, 'morning', i, selectedClass)
+                  " @dragleave="onDragLeave" @drop="onDrop(day.id, 'morning', i, selectedClass)"
+                  :class="getHighlightClass(day.id, 'morning', i)" class="p-1" style="min-height: 40px">
+                  {{ getLesson(day.id, "morning", i) }}
                 </div>
               </td>
-
-              <!-- Tiết chiều -->
-              <td v-for="i in 5" :key="'c_' + index + '_' + i">
-                <div
-                  draggable="true"
-                  @dragstart="onDragStart(day, 'afternoon', i, selectedClass)"
-                  @dragover.prevent
-                  @drop="onDrop(day, 'afternoon', i, selectedClass)"
-                  class="p-1"
-                  style="min-height: 40px"
-                >
-                  {{ getLesson(day, "afternoon", i) }}
+              <td v-for="i in 5" :key="'c_' + day.id + '_' + i">
+                <div draggable="true" @dragstart="
+                  onDragStart(day.id, 'afternoon', i, selectedClass)
+                  " @dragover.prevent="
+                    onDragOver(day.id, 'afternoon', i, selectedClass)
+                    " @dragleave="onDragLeave" @drop="onDrop(day.id, 'afternoon', i, selectedClass)"
+                  :class="getHighlightClass(day.id, 'afternoon', i)" class="p-1" style="min-height: 40px">
+                  {{ getLesson(day.id, "afternoon", i) }}
                 </div>
               </td>
             </tr>
@@ -75,420 +71,332 @@
       </div>
     </div>
     <div v-else>
-      <p class="text-muted">Vui lòng chọn lớp và giáo viên để xem thời khóa biểu.</p>
+      <p class="text-muted">
+        Vui lòng chọn lớp và giáo viên để xem thời khóa biểu.
+      </p>
+    </div>
+
+    <!-- Modal xác nhận đổi tiết -->
+    <div v-if="showModal" class="modal d-block" tabindex="-1" style="background-color: rgba(0, 0, 0, 0.5)">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Xác nhận đổi tiết</h5>
+            <button type="button" class="btn-close" @click="cancelSwap"></button>
+          </div>
+          <div class="modal-body">
+            <p>
+              Bạn đang đổi vào tiết của
+              <b>{{ swapInfo.toTeacherName }}</b>?
+            </p>
+            <div class="row">
+              <div class="col-md-6">
+                <h6>Thời khóa biểu của {{ swapInfo.fromTeacherName }}</h6>
+                <table class="table table-sm table-bordered text-center">
+                  <thead>
+                    <tr>
+                      <th>Thứ</th>
+                      <th>Buổi</th>
+                      <th>Tiết</th>
+                      <th>Môn</th>
+                      <th>Lớp</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="item in getTeacherSchedule(
+                      swapInfo.fromItem.teacherId
+                    )" :key="'from_' + item.id" :class="{
+                      'table-warning':
+                        item.dayId === swapInfo.fromItem.dayId &&
+                        item.sessionType === swapInfo.fromItem.sessionType &&
+                        item.period === swapInfo.fromItem.period,
+                    }">
+                      <td>{{ getDayName(item.dayId) }}</td>
+                      <td>
+                        {{ item.sessionType === "morning" ? "Sáng" : "Chiều" }}
+                      </td>
+                      <td>{{ item.period }}</td>
+                      <td>{{ getSubjectName(item.subjectId) }}</td>
+                      <td>{{ getClassName(item.classId) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="col-md-6">
+                <h6>Thời khóa biểu của {{ swapInfo.toTeacherName }}</h6>
+                <table class="table table-sm table-bordered text-center">
+                  <thead>
+                    <tr>
+                      <th>Thứ</th>
+                      <th>Buổi</th>
+                      <th>Tiết</th>
+                      <th>Môn</th>
+                      <th>Lớp</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="item in getTeacherSchedule(
+                      swapInfo.toItem.teacherId
+                    )" :key="'to_' + item.id" :class="{
+                      'table-warning':
+                        item.dayId === swapInfo.toItem.dayId &&
+                        item.sessionType === swapInfo.toItem.sessionType &&
+                        item.period === swapInfo.toItem.period,
+                    }">
+                      <td>{{ getDayName(item.dayId) }}</td>
+                      <td>
+                        {{ item.sessionType === "morning" ? "Sáng" : "Chiều" }}
+                      </td>
+                      <td>{{ item.period }}</td>
+                      <td>{{ getSubjectName(item.subjectId) }}</td>
+                      <td>{{ getClassName(item.classId) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" @click="cancelSwap">
+              Hủy
+            </button>
+            <button type="button" class="btn btn-primary" @click="confirmSwap">
+              Xác nhận
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
-import Vue from "vue";
-import toastr from "toastr";
-import "toastr/build/toastr.min.css";
-
-const defaultScheduleVersion = "v3";
-
-const defaultSchedule = {
-  version: defaultScheduleVersion,
-  data: {
-    "Thứ 2": {
-      morning: {
-        1: {
-          "1A": { subject: "Toán", teacher: "GV A" },
-          "1B": { subject: "Văn", teacher: "GV B" },
-          "1C": { subject: "Anh", teacher: "GV C" },
-        },
-        2: {
-          "2A": { subject: "Toán", teacher: "GV D" },
-          "2B": { subject: "Văn", teacher: "GV E" },
-          "2C": { subject: "Anh", teacher: "GV F" },
-        },
-        3: {
-          "1A": { subject: "Sử", teacher: "GV G" },
-          "1B": { subject: "Địa", teacher: "GV H" },
-          "1C": { subject: "GDCD", teacher: "GV A" },
-        },
-        4: {
-          "2A": { subject: "Sinh", teacher: "GV I" },
-          "2B": { subject: "Lý", teacher: "GV J" },
-          "2C": { subject: "Hóa", teacher: "GV K" },
-        },
-        5: {
-          "1A": { subject: "Thể dục", teacher: "GV L" },
-          "1B": { subject: "Mỹ thuật", teacher: "GV M" },
-        },
-      },
-      afternoon: {
-        1: {
-          "2A": { subject: "Lý", teacher: "GV B" },
-          "2B": { subject: "Hóa", teacher: "GV C" },
-        },
-        2: {
-          "2C": { subject: "Sinh", teacher: "GV D" },
-          "1A": { subject: "Nhạc", teacher: "GV E" },
-        },
-        3: {
-          "1B": { subject: "Tin học", teacher: "GV F" },
-          "1C": { subject: "Thể dục", teacher: "GV G" },
-        },
-        4: {
-          "2A": { subject: "Công nghệ", teacher: "GV H" },
-          "2B": { subject: "GDCD", teacher: "GV I" },
-        },
-      },
-    },
-    "Thứ 3": {
-      morning: {
-        1: {
-          "1A": { subject: "Toán", teacher: "GV A" },
-          "2A": { subject: "Văn", teacher: "GV B" },
-        },
-        2: {
-          "1B": { subject: "Anh", teacher: "GV C" },
-          "2B": { subject: "Toán", teacher: "GV D" },
-        },
-        3: {
-          "1C": { subject: "Sử", teacher: "GV E" },
-          "2C": { subject: "Địa", teacher: "GV F" },
-        },
-        4: {
-          "1A": { subject: "Sinh", teacher: "GV G" },
-          "1B": { subject: "Tin học", teacher: "GV H" },
-        },
-        5: {
-          "2A": { subject: "Thể dục", teacher: "GV I" },
-        },
-      },
-      afternoon: {
-        1: {
-          "2B": { subject: "Nhạc", teacher: "GV J" },
-          "1C": { subject: "Mỹ thuật", teacher: "GV K" },
-        },
-        2: {
-          "1A": { subject: "GDCD", teacher: "GV L" },
-          "2C": { subject: "Công nghệ", teacher: "GV M" },
-        },
-      },
-    },
-    "Thứ 4": {
-      morning: {
-        1: {
-          "1A": { subject: "Toán", teacher: "GV A" },
-          "2A": { subject: "Văn", teacher: "GV B" },
-        },
-        2: {
-          "1B": { subject: "Anh", teacher: "GV C" },
-          "2B": { subject: "Toán", teacher: "GV D" },
-        },
-        3: {
-          "1C": { subject: "Hóa", teacher: "GV E" },
-          "2C": { subject: "Lý", teacher: "GV F" },
-        },
-        4: {
-          "1A": { subject: "Sinh", teacher: "GV G" },
-        },
-      },
-      afternoon: {
-        1: {
-          "1B": { subject: "GDCD", teacher: "GV H" },
-          "2A": { subject: "Thể dục", teacher: "GV I" },
-        },
-        2: {
-          "1C": { subject: "Tin học", teacher: "GV J" },
-        },
-      },
-    },
-    "Thứ 5": {
-      morning: {
-        1: {
-          "1A": { subject: "Sử", teacher: "GV K" },
-          "2A": { subject: "Địa", teacher: "GV L" },
-        },
-        2: {
-          "1B": { subject: "Văn", teacher: "GV M" },
-          "2B": { subject: "Toán", teacher: "GV A" },
-        },
-        3: {
-          "1C": { subject: "Anh", teacher: "GV B" },
-          "2C": { subject: "Hóa", teacher: "GV C" },
-        },
-      },
-      afternoon: {
-        1: {
-          "2A": { subject: "Nhạc", teacher: "GV D" },
-          "2B": { subject: "Mỹ thuật", teacher: "GV E" },
-        },
-        2: {
-          "1A": { subject: "GDCD", teacher: "GV F" },
-          "1B": { subject: "Công nghệ", teacher: "GV G" },
-        },
-      },
-    },
-    "Thứ 6": {
-      morning: {
-        1: {
-          "1A": { subject: "Toán", teacher: "GV A" },
-          "1B": { subject: "Văn", teacher: "GV B" },
-          "1C": { subject: "Anh", teacher: "GV C" },
-        },
-        2: {
-          "2A": { subject: "Toán", teacher: "GV D" },
-          "2B": { subject: "Văn", teacher: "GV E" },
-          "2C": { subject: "Anh", teacher: "GV F" },
-        },
-        3: {
-          "1A": { subject: "Sinh", teacher: "GV G" },
-          "1B": { subject: "Địa", teacher: "GV H" },
-          "1C": { subject: "GDCD", teacher: "GV I" },
-        },
-        4: {
-          "2A": { subject: "Sử", teacher: "GV J" },
-          "2B": { subject: "Lý", teacher: "GV K" },
-        },
-      },
-      afternoon: {
-        1: {
-          "2C": { subject: "Thể dục", teacher: "GV L" },
-          "1A": { subject: "Tin học", teacher: "GV M" },
-        },
-        2: {
-          "1B": { subject: "Mỹ thuật", teacher: "GV N" },
-        },
-      },
-    },
-  },
-};
-
 export default {
   name: "TKBtheo1lop_1Gv",
   data() {
-    // Khởi tạo reactive schedule
-    const reactiveSchedule = Vue.observable({
-      schedule: {},
-    });
-
-    // Hàm khởi tạo schedule
-    const initSchedule = () => {
-      try {
-        const localData = localStorage.getItem("savedSchedule");
-        if (!localData) {
-          this.resetSchedule();
-        } else {
-          const parsed = JSON.parse(localData);
-          if (parsed.version !== defaultScheduleVersion) {
-            this.resetSchedule();
-          } else {
-            reactiveSchedule.schedule = parsed.data;
-          }
-        }
-      } catch (e) {
-        console.error("Lỗi khi khởi tạo schedule:", e);
-        this.resetSchedule();
-      }
-    };
-
-    // Gọi khởi tạo
-    initSchedule();
-
     return {
+      days: [
+        { id: 1, name: "Thứ 2" },
+        { id: 2, name: "Thứ 3" },
+        { id: 3, name: "Thứ 4" },
+        { id: 4, name: "Thứ 5" },
+        { id: 5, name: "Thứ 6" },
+      ],
+      grades: [
+        {
+          id: 1,
+          name: "Khối 1",
+          classes: [
+            { id: 1, name: "1A" },
+            { id: 2, name: "1B" },
+          ],
+        },
+        {
+          id: 2,
+          name: "Khối 2",
+          classes: [
+            { id: 3, name: "2A" },
+            { id: 4, name: "2B" },
+          ],
+        },
+      ],
+      subjects: [
+        { id: 1, name: "Toán" },
+        { id: 2, name: "Văn" },
+        { id: 3, name: "Anh" },
+        { id: 4, name: "Lý" },
+      ],
+      teachers: [
+        { id: 1, name: "GV A" },
+        { id: 2, name: "GV B" },
+        { id: 3, name: "GV C" },
+        { id: 4, name: "GV D" },
+      ],
+      schedule: [
+        {
+          id: 1,
+          dayId: 1,
+          sessionType: "morning",
+          period: 1,
+          classId: 1,
+          subjectId: 1,
+          teacherId: 1,
+        },
+        {
+          id: 2,
+          dayId: 1,
+          sessionType: "morning",
+          period: 2,
+          classId: 1,
+          subjectId: 2,
+          teacherId: 3,
+        },
+        {
+          id: 3,
+          dayId: 2,
+          sessionType: "morning",
+          period: 2,
+          classId: 1,
+          subjectId: 2,
+          teacherId: 2,
+        },
+        {
+          id: 4,
+          dayId: 3,
+          sessionType: "afternoon",
+          period: 3,
+          classId: 2,
+          subjectId: 3,
+          teacherId: 3,
+        },
+      ],
       selectedClass: "",
       selectedTeacher: "",
-      classes: ["1A", "1B", "1C", "2A", "2B", "2C"],
-      teachers: [
-        "GV A",
-        "GV B",
-        "GV C",
-        "GV D",
-        "GV E",
-        "GV F",
-        "GV G",
-        "GV H",
-        "GV I",
-        "GV J",
-        "GV K",
-        "GV L",
-        "GV M",
-        "GV N",
-      ],
-      days: ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6"],
       dragData: null,
-      reactiveSchedule,
+      showModal: false,
+      swapInfo: null,
+      highlightCell: null,
     };
   },
-  computed: {
-    schedule() {
-      return this.reactiveSchedule.schedule;
-    },
-  },
   methods: {
-    getLesson(day, session, period) {
-      const lessonObj = this.schedule?.[day]?.[session]?.[period]?.[this.selectedClass];
-      if (!lessonObj) return "";
-
-      if (lessonObj.teacher === this.selectedTeacher) {
-        return lessonObj.subject;
+    getTeacherSchedule(teacherId) {
+      return this.schedule.filter((item) => item.teacherId === teacherId);
+    },
+    getDayName(dayId) {
+      const d = this.days.find((x) => x.id === dayId);
+      return d ? d.name : "";
+    },
+    getSubjectName(subjectId) {
+      const s = this.subjects.find((x) => x.id === subjectId);
+      return s ? s.name : "";
+    },
+    getClassName(classId) {
+      const c = this.grades
+        .flatMap((g) => g.classes)
+        .find((x) => x.id === classId);
+      return c ? c.name : "";
+    },
+    getLesson(dayId, sessionType, period) {
+      const cls = this.grades
+        .flatMap((g) => g.classes)
+        .find((c) => c.name === this.selectedClass);
+      if (!cls) return "";
+      const lesson = this.schedule.find(
+        (item) =>
+          item.dayId === dayId &&
+          item.sessionType === sessionType &&
+          item.period === period &&
+          item.classId === cls.id
+      );
+      if (
+        lesson &&
+        this.teachers.find((t) => t.id === lesson.teacherId)?.name ===
+        this.selectedTeacher
+      ) {
+        return this.getSubjectName(lesson.subjectId);
       }
       return "";
     },
-
-    onDragStart(day, session, period, cls) {
-      this.dragData = { day, session, period, cls };
+    // Khi bắt đầu kéo, lưu dữ liệu tiết học (dragData).
+    onDragStart(dayId, sessionType, period, className) {
+      const cls = this.grades
+        .flatMap((g) => g.classes)
+        .find((c) => c.name === className);
+      if (cls) this.dragData = { dayId, sessionType, period, classId: cls.id };
     },
-
-    onDrop(day, session, period, cls) {
-      if (!this.dragData) return;
-
-      const {
-        day: fromDay,
-        session: fromSession,
-        period: fromPeriod,
-        cls: fromCls,
-      } = this.dragData;
-
-      if (fromCls !== cls) {
+    //Khi kéo qua ô khác, lưu dữ liệu highlightCell để làm nổi ô.
+    onDragOver(dayId, sessionType, period, className) {
+      const cls = this.grades
+        .flatMap((g) => g.classes)
+        .find((c) => c.name === className);
+      if (cls && this.dragData)
+        this.highlightCell = { dayId, sessionType, period, classId: cls.id };
+    },
+    // Khi rời ô, xóa highlight.
+    onDragLeave() {
+      this.highlightCell = null;
+    },
+    onDrop(dayId, sessionType, period, className) {
+      const cls = this.grades
+        .flatMap((g) => g.classes)
+        .find((c) => c.name === className);
+      if (!this.dragData || !cls || cls.id !== this.dragData.classId) {
         this.dragData = null;
+        this.highlightCell = null;
         return;
       }
-
-      const fromVal =
-        this.schedule?.[fromDay]?.[fromSession]?.[fromPeriod]?.[fromCls] || null;
-      const toVal = this.schedule?.[day]?.[session]?.[period]?.[cls] || null;
-
-      if (!fromVal) {
-        this.dragData = null;
-        return;
+      const fromItem = this.schedule.find(
+        (i) =>
+          i.dayId === this.dragData.dayId &&
+          i.sessionType === this.dragData.sessionType &&
+          i.period === this.dragData.period &&
+          i.classId === this.dragData.classId
+      );
+      const toItem = this.schedule.find(
+        (i) =>
+          i.dayId === dayId &&
+          i.sessionType === sessionType &&
+          i.period === period &&
+          i.classId === cls.id
+      );
+      if (fromItem) {
+        if (toItem) {
+          const fromT = this.teachers.find((t) => t.id === fromItem.teacherId);
+          const toT = this.teachers.find((t) => t.id === toItem.teacherId);
+          if (fromT && toT && fromT.id !== toT.id) {
+            this.swapInfo = {
+              fromItem,
+              toItem,
+              fromTeacherName: fromT.name,
+              toTeacherName: toT.name,
+            };
+            this.showModal = true;
+            this.highlightCell = null;
+            return;
+          }
+        } else {
+          fromItem.dayId = dayId;
+          fromItem.sessionType = sessionType;
+          fromItem.period = period;
+        }
       }
-
-      if (
-        toVal &&
-        fromVal.teacher &&
-        toVal.teacher &&
-        fromVal.teacher !== toVal.teacher
-      ) {
-        toastr.warning(
-          `Đang thay tiết ${fromVal.subject} - ${fromVal.teacher} bằng tiết ${toVal.subject} - ${toVal.teacher}`,
-          "Cảnh báo"
-        );
-      }
-
-      this.updateLesson(fromDay, fromSession, fromPeriod, fromCls, toVal);
-      this.updateLesson(day, session, period, cls, fromVal);
-
       this.dragData = null;
+      this.highlightCell = null;
     },
-
-    updateLesson(day, session, period, cls, value) {
-      if (!this.reactiveSchedule.schedule[day]) {
-        Vue.set(this.reactiveSchedule.schedule, day, {});
-      }
-      if (!this.reactiveSchedule.schedule[day][session]) {
-        Vue.set(this.reactiveSchedule.schedule[day], session, {});
-      }
-      if (!this.reactiveSchedule.schedule[day][session][period]) {
-        Vue.set(this.reactiveSchedule.schedule[day][session], period, {});
-      }
-      Vue.set(this.reactiveSchedule.schedule[day][session][period], cls, value);
-
-      this.saveSchedule();
+    //Hiển thị highlight (ô sáng màu)
+    getHighlightClass(dayId, sessionType, period) {
+      return this.highlightCell &&
+        this.highlightCell.dayId === dayId &&
+        this.highlightCell.sessionType === sessionType &&
+        this.highlightCell.period === period
+        ? "bg-warning"
+        : "";
     },
-
-    saveSchedule() {
-      try {
-        localStorage.setItem(
-          "savedSchedule",
-          JSON.stringify({
-            version: defaultScheduleVersion,
-            data: this.reactiveSchedule.schedule,
-          })
-        );
-      } catch (e) {
-        console.error("Lỗi khi lưu schedule:", e);
-        toastr.error("Lỗi khi lưu thời khóa biểu!");
+    // Xác nhận hoán đổi, hoán đổi teacherId và subjectId giữa 2 tiết.
+    confirmSwap() {
+      if (this.swapInfo) {
+        const { fromItem, toItem } = this.swapInfo;
+        // Hoán đổi teacherId
+        const tempTeacherId = fromItem.teacherId;
+        fromItem.teacherId = toItem.teacherId;
+        toItem.teacherId = tempTeacherId;
+        // Hoán đổi subjectId
+        const tempSubjectId = fromItem.subjectId;
+        fromItem.subjectId = toItem.subjectId;
+        toItem.subjectId = tempSubjectId;
       }
+      this.showModal = false;
+      this.swapInfo = null;
+      this.dragData = null;
+      this.highlightCell = null;
     },
-
-    resetSchedule() {
-      try {
-        localStorage.setItem("savedSchedule", JSON.stringify(defaultSchedule));
-        this.reactiveSchedule.schedule = JSON.parse(JSON.stringify(defaultSchedule.data));
-        toastr.success("Đã reset về thời khóa biểu mặc định");
-      } catch (e) {
-        console.error("Lỗi khi reset schedule:", e);
-        toastr.error("Lỗi khi reset thời khóa biểu!");
-      }
+    //Hủy hoán đổi, đóng modal.
+    cancelSwap() {
+      this.showModal = false;
+      this.swapInfo = null;
+      this.dragData = null;
+      this.highlightCell = null;
     },
   },
 };
 </script>
-
-<style scoped>
-.table {
-  table-layout: fixed;
-  width: 100%;
-}
-
-.table th,
-.table td {
-  border: 1px solid #151516;
-  font-size: 14px;
-  padding: 0.5rem;
-  white-space: nowrap;
-  text-align: center;
-  vertical-align: middle;
-}
-
-.table td > div {
-  min-height: 40px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.table td[colspan="2"] {
-  text-align: center;
-  vertical-align: middle;
-}
-
-.table thead th {
-  background-color: #b3e9ef;
-  font-weight: bold;
-  text-align: center;
-}
-
-.text-muted {
-  font-style: italic;
-}
-
-.align-middle {
-  background-color: #dab1a7a1 !important;
-}
-
-/* Thêm responsive cho mobile */
-@media (max-width: 767.98px) {
-  .table-responsive {
-    width: 100%;
-    margin-bottom: 1rem;
-    overflow-y: hidden;
-    -ms-overflow-style: -ms-autohiding-scrollbar;
-    border: 1px solid #dee2e6;
-  }
-
-  .table {
-    min-width: 600px;
-  }
-
-  .table th,
-  .table td {
-    font-size: 12px;
-    padding: 0.3rem;
-  }
-}
-
-@media (max-width: 575.98px) {
-  .table th,
-  .table td {
-    font-size: 12px;
-    padding: 0.3rem;
-    min-width: 40px;
-  }
-}
-</style>
