@@ -2,15 +2,38 @@
   <div class="container-fluid mt-3">
     <div v-for="grade in grades" :key="grade.id" class="mb-5">
       <h4>{{ grade.name }}</h4>
-      <div v-for="classItem in grade.classes" :key="classItem.id" class="mb-4">
-        <h5>Lớp {{ classItem.name }}</h5>
+
+      <!-- Thêm combobox chọn lớp -->
+      <div class="form-group mb-3">
+        <label for="classSelect">Chọn lớp:</label>
+        <select
+          id="classSelect"
+          class="form-control"
+          v-model="selectedClass[grade.id]"
+          @change="onClassChange(grade.id)"
+        >
+          <option value="">-- Chọn lớp --</option>
+          <option
+            v-for="classItem in grade.classes"
+            :key="classItem.id"
+            :value="classItem.id"
+          >
+            Lớp {{ classItem.name }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Chỉ hiển thị bảng khi lớp được chọn -->
+      <div v-if="selectedClass[grade.id] && getSelectedClass(grade.id)">
         <div class="table-responsive">
           <table class="table table-bordered table-sm text-center align-middle">
             <thead class="thead-light">
               <tr>
-                <th rowspan="2" style="width: 80px;">Buổi</th>
-                <th rowspan="2" style="width: 50px;">Tiết/Thứ</th>
-                <th colspan="5" class="text-center">Lớp {{ classItem.name }}</th>
+                <th rowspan="2" style="width: 80px">Buổi</th>
+                <th rowspan="2" style="width: 50px">Tiết/Thứ</th>
+                <th colspan="5" class="text-center">
+                  Lớp {{ getSelectedClassName(grade.id) }}
+                </th>
               </tr>
               <tr>
                 <th v-for="day in days" :key="day.id" class="text-center">
@@ -21,20 +44,56 @@
             <tbody>
               <template v-for="session in sessions">
                 <tr v-for="period in periods" :key="`${session.type}-${period}`">
-                  <td v-if="period === 1" :rowspan="periods.length" class="align-middle font-weight-bold">
+                  <td
+                    v-if="period === 1"
+                    :rowspan="periods.length"
+                    class="align-middle font-weight-bold"
+                  >
                     {{ session.label }}
                   </td>
                   <td>{{ period }}</td>
                   <template v-for="day in days">
-                    <td :key="`${day.id}-${period}`" @dragover.prevent
-                      @drop="handleDrop(day, session, period, classItem)" style="cursor: grab; height: 50px;">
-                      <div class="p-2 bg-light rounded" draggable="true"
-                        @dragstart="handleDragStart(day, session, period, classItem)">
-                        <span v-if="getLesson(day, session, period, classItem)">
-                          {{ getSubjectName(day, session, period, classItem) }}
+                    <td
+                      :key="`${day.id}-${period}`"
+                      @dragover.prevent
+                      @drop="handleDrop(day, session, period, getSelectedClass(grade.id))"
+                      style="cursor: grab; height: 50px"
+                    >
+                      <div
+                        class="p-2 bg-light rounded"
+                        draggable="true"
+                        @dragstart="
+                          handleDragStart(
+                            day,
+                            session,
+                            period,
+                            getSelectedClass(grade.id)
+                          )
+                        "
+                      >
+                        <span
+                          v-if="
+                            getLesson(day, session, period, getSelectedClass(grade.id))
+                          "
+                        >
+                          {{
+                            getSubjectName(
+                              day,
+                              session,
+                              period,
+                              getSelectedClass(grade.id)
+                            )
+                          }}
                           <br />
                           <small class="text-primary">
-                            ({{ getTeacherName(day, session, period, classItem) }})
+                            ({{
+                              getTeacherName(
+                                day,
+                                session,
+                                period,
+                                getSelectedClass(grade.id)
+                              )
+                            }})
                           </small>
                         </span>
                         <span v-else class="text-muted">-</span>
@@ -50,15 +109,26 @@
     </div>
 
     <!-- Modal đổi tiết -->
-    <div ref="swapModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="swapModalLabel"
-      aria-hidden="true">
+    <div
+      ref="swapModal"
+      class="modal fade"
+      tabindex="-1"
+      role="dialog"
+      aria-labelledby="swapModalLabel"
+      aria-hidden="true"
+    >
       <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
           <div class="modal-header bg-primary text-white">
             <h5 class="modal-title font-weight-bold" id="swapModalLabel">
               <i class="fas fa-exchange-alt mr-2"></i>Xác nhận đổi tiết
             </h5>
-            <button type="button" class="close text-white" @click="cancelSwap" aria-label="Close">
+            <button
+              type="button"
+              class="close text-white"
+              @click="cancelSwap"
+              aria-label="Close"
+            >
               <span aria-hidden="true">&times;</span>
             </button>
           </div>
@@ -69,15 +139,22 @@
                 <div class="col-md-6">
                   <div class="card border-primary">
                     <div class="card-header bg-primary text-white">
-                      <h6 class="mb-0"><i class="fas fa-arrow-circle-right mr-2"></i>Từ tiết</h6>
+                      <h6 class="mb-0">
+                        <i class="fas fa-arrow-circle-right mr-2"></i>Từ tiết
+                      </h6>
                     </div>
                     <div class="card-body">
                       <h5 class="text-primary">{{ swapData.from.subjectName }}</h5>
-                      <p class="mb-1"><strong>Giáo viên:</strong> {{ swapData.from.teacherName }}</p>
-                      <p class="mb-1"><strong>Lớp:</strong> {{ getClassName(swapData.from.classId) }}</p>
-                      <p><strong>Thời gian:</strong> {{ getDayName(swapData.from.dayId) }}, {{ swapData.from.sessionType
-                      }},
-                        Tiết {{ swapData.from.period }}</p>
+                      <p class="mb-1">
+                        <strong>Giáo viên:</strong> {{ swapData.from.teacherName }}
+                      </p>
+                      <p class="mb-1">
+                        <strong>Lớp:</strong> {{ getClassName(swapData.from.classId) }}
+                      </p>
+                      <p>
+                        <strong>Thời gian:</strong> {{ getDayName(swapData.from.dayId) }},
+                        {{ swapData.from.sessionType }}, Tiết {{ swapData.from.period }}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -85,15 +162,30 @@
                 <div class="col-md-6">
                   <div class="card border-success">
                     <div class="card-header bg-success text-white">
-                      <h6 class="mb-0"><i class="fas fa-arrow-circle-left mr-2"></i>Đến tiết</h6>
+                      <h6 class="mb-0">
+                        <i class="fas fa-arrow-circle-left mr-2"></i>Đến tiết
+                      </h6>
                     </div>
                     <div class="card-body">
-                      <h5 class="text-success">{{ swapData.to.subjectName || "Trống" }}</h5>
-                      <p class="mb-1"><strong>Giáo viên:</strong> {{ swapData.to.teacherName || "Trống" }}</p>
-                      <p class="mb-1"><strong>Lớp:</strong> {{ swapData.to.classId ? getClassName(swapData.to.classId) :
-                        "Trống" }}</p>
-                      <p><strong>Thời gian:</strong> {{ getDayName(swapData.to.dayId) }}, {{ swapData.to.sessionType }},
-                        Tiết {{ swapData.to.period }}</p>
+                      <h5 class="text-success">
+                        {{ swapData.to.subjectName || "Trống" }}
+                      </h5>
+                      <p class="mb-1">
+                        <strong>Giáo viên:</strong>
+                        {{ swapData.to.teacherName || "Trống" }}
+                      </p>
+                      <p class="mb-1">
+                        <strong>Lớp:</strong>
+                        {{
+                          swapData.to.classId
+                            ? getClassName(swapData.to.classId)
+                            : "Trống"
+                        }}
+                      </p>
+                      <p>
+                        <strong>Thời gian:</strong> {{ getDayName(swapData.to.dayId) }},
+                        {{ swapData.to.sessionType }}, Tiết {{ swapData.to.period }}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -110,7 +202,10 @@
                     </h6>
                   </div>
                   <div class="card-body p-0">
-                    <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                    <div
+                      class="table-responsive"
+                      style="max-height: 300px; overflow-y: auto"
+                    >
                       <table class="table table-sm table-hover mb-0">
                         <thead class="thead-light sticky-top">
                           <tr>
@@ -122,12 +217,19 @@
                           </tr>
                         </thead>
                         <tbody>
-                          <tr v-for="item in getScheduleByTeacher(swapData.from.teacherId)" :key="item.id"
-                            :class="{ 'table-primary': item.id === swapData.from.id }">
-                            <td><strong>{{ getDayName(item.dayId) }}</strong></td>
+                          <tr
+                            v-for="item in getScheduleByTeacher(swapData.from.teacherId)"
+                            :key="item.id"
+                            :class="{ 'table-primary': item.id === swapData.from.id }"
+                          >
+                            <td>
+                              <strong>{{ getDayName(item.dayId) }}</strong>
+                            </td>
                             <td>{{ item.sessionType }}</td>
                             <td>Tiết {{ item.period }}</td>
-                            <td><em>{{ getClassName(item.classId) }}</em></td>
+                            <td>
+                              <em>{{ getClassName(item.classId) }}</em>
+                            </td>
                             <td>{{ getSubjectNameById(item.subjectId) }}</td>
                           </tr>
                         </tbody>
@@ -146,7 +248,10 @@
                     </h6>
                   </div>
                   <div class="card-body p-0">
-                    <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                    <div
+                      class="table-responsive"
+                      style="max-height: 300px; overflow-y: auto"
+                    >
                       <table class="table table-sm table-hover mb-0">
                         <thead class="thead-light sticky-top">
                           <tr>
@@ -158,12 +263,19 @@
                           </tr>
                         </thead>
                         <tbody>
-                          <tr v-for="item in getScheduleByTeacher(swapData.to.teacherId)" :key="item.id"
-                            :class="{ 'table-success': item.id === swapData.to.id }">
-                            <td><strong>{{ getDayName(item.dayId) }}</strong></td>
+                          <tr
+                            v-for="item in getScheduleByTeacher(swapData.to.teacherId)"
+                            :key="item.id"
+                            :class="{ 'table-success': item.id === swapData.to.id }"
+                          >
+                            <td>
+                              <strong>{{ getDayName(item.dayId) }}</strong>
+                            </td>
                             <td>{{ item.sessionType }}</td>
                             <td>Tiết {{ item.period }}</td>
-                            <td><em>{{ getClassName(item.classId) }}</em></td>
+                            <td>
+                              <em>{{ getClassName(item.classId) }}</em>
+                            </td>
                             <td>{{ getSubjectNameById(item.subjectId) }}</td>
                           </tr>
                         </tbody>
@@ -188,8 +300,14 @@
     </div>
 
     <!-- Thêm modal thông báo lỗi -->
-    <div ref="errorModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="errorModalLabel"
-      aria-hidden="true">
+    <div
+      ref="errorModal"
+      class="modal fade"
+      tabindex="-1"
+      role="dialog"
+      aria-labelledby="errorModalLabel"
+      aria-hidden="true"
+    >
       <div class="modal-dialog" role="document">
         <div class="modal-content">
           <div class="modal-header bg-danger text-white">
@@ -302,6 +420,7 @@ export default {
       ],
       dragData: null,
       swapData: null,
+      selectedClass: {},
     };
   },
   methods: {
@@ -339,170 +458,121 @@ export default {
       return day ? day.name : "";
     },
     getClassName(classId) {
-      const cls = this.grades
-        .flatMap((g) => g.classes)
-        .find((c) => c.id === classId);
+      const cls = this.grades.flatMap((g) => g.classes).find((c) => c.id === classId);
       return cls ? cls.name : "";
+    },
+    // Thêm các phương thức mới
+    getSelectedClass(gradeId) {
+      if (!this.selectedClass[gradeId]) return null;
+      const grade = this.grades.find((g) => g.id === gradeId);
+      return grade?.classes.find((c) => c.id === this.selectedClass[gradeId]) || null;
+    },
+
+    getSelectedClassName(gradeId) {
+      const selected = this.getSelectedClass(gradeId);
+      return selected ? selected.name : "";
     },
     handleDragStart(day, session, period, cls) {
       const lesson = this.getLesson(day, session, period, cls);
-      this.dragData = {
-        day,
-        session,
-        period,
-        cls,
-        lesson,
-      }; // Lưu thông tin từ vị trí kéo (kể cả khi lesson trống)
+      if (lesson) {
+        this.dragData = {
+          dayId: day.id,
+          sessionType: session.type,
+          period: period,
+          classId: cls.id,
+          lessonId: lesson.id,
+          subjectId: lesson.subjectId,
+          teacherId: lesson.teacherId,
+          subjectName: this.getSubjectNameById(lesson.subjectId),
+          teacherName: this.teachers.find((t) => t.id === lesson.teacherId)?.name || "",
+        };
+      } else {
+        // Nếu không có tiết học thì không cho kéo
+        this.dragData = null;
+      }
     },
 
     handleDrop(day, session, period, cls) {
       if (!this.dragData) return;
-      // Kiểm tra xem có cùng lớp không
-      if (this.dragData.cls.id !== cls.id) {
+
+      // Không cho phép đổi giữa các lớp khác nhau
+      if (this.dragData.classId !== cls.id) {
         $(this.$refs.errorModal).modal("show");
-        this.dragData = null;
         return;
       }
-      const targetLesson = this.getLesson(day, session, period, cls);
 
-      // Cập nhật swapData để hiển thị modal xác nhận
+      // Lấy thông tin tiết học tại vị trí drop
+      const targetLesson = this.getLesson(day, session, period, cls);
       this.swapData = {
-        from: this.dragData.lesson
-          ? {
-            ...this.dragData.lesson,
-            teacherName: this.getTeacherName(
-              this.dragData.day,
-              this.dragData.session,
-              this.dragData.period,
-              this.dragData.cls
-            ),
-            subjectName: this.getSubjectName(
-              this.dragData.day,
-              this.dragData.session,
-              this.dragData.period,
-              this.dragData.cls
-            ),
-            teacherId: this.dragData.lesson.teacherId,
-          }
-          : {
-            teacherName: null,
-            subjectName: null,
-            teacherId: null,
-            dayId: this.dragData.day.id,
-            sessionType: this.dragData.session.type,
-            period: this.dragData.period,
-            classId: this.dragData.cls.id,
-          },
+        from: {
+          ...this.dragData,
+        },
         to: targetLesson
           ? {
-            ...targetLesson,
-            teacherName: this.getTeacherName(day, session, period, cls),
-            subjectName: this.getSubjectName(day, session, period, cls),
-            teacherId: targetLesson.teacherId,
-          }
+              dayId: day.id,
+              sessionType: session.type,
+              period: period,
+              classId: cls.id,
+              lessonId: targetLesson.id,
+              subjectId: targetLesson.subjectId,
+              teacherId: targetLesson.teacherId,
+              subjectName: this.getSubjectNameById(targetLesson.subjectId),
+              teacherName:
+                this.teachers.find((t) => t.id === targetLesson.teacherId)?.name || "",
+            }
           : {
-            teacherName: null,
-            subjectName: null,
-            teacherId: null,
-          },
-        fromPos: {
-          day: this.dragData.day,
-          session: this.dragData.session,
-          period: this.dragData.period,
-          cls: this.dragData.cls,
-        },
-        toPos: {
-          day,
-          session,
-          period,
-          cls,
-        },
+              dayId: day.id,
+              sessionType: session.type,
+              period: period,
+              classId: cls.id,
+            },
       };
 
       $(this.$refs.swapModal).modal("show");
     },
+
     cancelSwap() {
       this.swapData = null;
-      this.dragData = null;
       $(this.$refs.swapModal).modal("hide");
     },
+
     confirmSwap() {
-      if (!this.swapData) return;
+      const fromIndex = this.schedule.findIndex(
+        (item) =>
+          item.dayId === this.swapData.from.dayId &&
+          item.sessionType === this.swapData.from.sessionType &&
+          item.period === this.swapData.from.period &&
+          item.classId === this.swapData.from.classId
+      );
 
-      const fromLesson = this.swapData.from.teacherId
-        ? this.schedule.find(
-          (item) =>
-            item.dayId === this.swapData.from.dayId &&
-            item.sessionType === this.swapData.from.sessionType &&
-            item.period === this.swapData.from.period &&
-            item.classId === this.swapData.from.classId
-        )
-        : null;
+      const toIndex = this.schedule.findIndex(
+        (item) =>
+          item.dayId === this.swapData.to.dayId &&
+          item.sessionType === this.swapData.to.sessionType &&
+          item.period === this.swapData.to.period &&
+          item.classId === this.swapData.to.classId
+      );
 
-      const toLesson = this.swapData.to.teacherId
-        ? this.schedule.find(
-          (item) =>
-            item.dayId === this.swapData.to.dayId &&
-            item.sessionType === this.swapData.to.sessionType &&
-            item.period === this.swapData.to.period &&
-            item.classId === this.swapData.to.classId
-        )
-        : null;
-
-      let newSchedule = [...this.schedule];
-
-      if (fromLesson && toLesson) {
-        // Hoán đổi giữa 2 tiết
-        const fromIndex = newSchedule.indexOf(fromLesson);
-        const toIndex = newSchedule.indexOf(toLesson);
-
-        // Hoán đổi dữ liệu
-        const temp = {
-          dayId: fromLesson.dayId,
-          sessionType: fromLesson.sessionType,
-          period: fromLesson.period,
-          classId: fromLesson.classId,
-        };
-
-        newSchedule[fromIndex].dayId = toLesson.dayId;
-        newSchedule[fromIndex].sessionType = toLesson.sessionType;
-        newSchedule[fromIndex].period = toLesson.period;
-        newSchedule[fromIndex].classId = toLesson.classId;
-
-        newSchedule[toIndex].dayId = temp.dayId;
-        newSchedule[toIndex].sessionType = temp.sessionType;
-        newSchedule[toIndex].period = temp.period;
-        newSchedule[toIndex].classId = temp.classId;
-      } else if (fromLesson) {
-        // Di chuyển tiết từ from sang to
-        const fromIndex = newSchedule.indexOf(fromLesson);
-        newSchedule[fromIndex] = {
-          ...newSchedule[fromIndex],
-          dayId: this.swapData.toPos.day.id,
-          sessionType: this.swapData.toPos.session.type,
-          period: this.swapData.toPos.period,
-          classId: this.swapData.toPos.cls.id,
-        };
-      } else if (toLesson) {
-        // Di chuyển tiết từ to sang from
-        const toIndex = newSchedule.indexOf(toLesson);
-        newSchedule[toIndex] = {
-          ...newSchedule[toIndex],
-          dayId: this.swapData.fromPos.day.id,
-          sessionType: this.swapData.fromPos.session.type,
-          period: this.swapData.fromPos.period,
-          classId: this.swapData.fromPos.cls.id,
-        };
+      // Thực hiện đổi dữ liệu
+      if (fromIndex !== -1) {
+        if (toIndex !== -1) {
+          // Đổi tiết giữa 2 tiết có bài học
+          const temp = { ...this.schedule[fromIndex] };
+          this.schedule[fromIndex] = { ...this.schedule[toIndex], id: temp.id };
+          this.schedule[toIndex] = { ...temp, id: this.schedule[toIndex].id };
+        } else {
+          // Di chuyển từ có bài học sang ô trống
+          this.schedule[fromIndex].dayId = this.swapData.to.dayId;
+          this.schedule[fromIndex].sessionType = this.swapData.to.sessionType;
+          this.schedule[fromIndex].period = this.swapData.to.period;
+        }
       }
 
-      this.schedule = newSchedule;
       this.cancelSwap();
     },
+
     getScheduleByTeacher(teacherId) {
-      if (!teacherId) return [];
-      return this.schedule
-        .filter((item) => item.teacherId === teacherId)
-        .sort((a, b) => a.dayId - b.dayId || a.period - b.period);
+      return this.schedule.filter((item) => item.teacherId === teacherId);
     },
     isHighlight(item, swapInfo) {
       return (
