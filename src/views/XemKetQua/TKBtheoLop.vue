@@ -206,31 +206,114 @@
                       class="table-responsive"
                       style="max-height: 300px; overflow-y: auto"
                     >
-                      <table class="table table-sm table-hover mb-0">
-                        <thead class="thead-light sticky-top">
+                      <table class="table table-sm table-bordered mb-0">
+                        <thead class="thead-light">
                           <tr>
-                            <th width="15%">Thứ</th>
-                            <th width="15%">Buổi</th>
-                            <th width="15%">Tiết</th>
-                            <th width="25%">Lớp</th>
-                            <th width="30%">Môn học</th>
+                            <th>Buổi</th>
+                            <th>Thứ 2</th>
+                            <th>Thứ 3</th>
+                            <th>Thứ 4</th>
+                            <th>Thứ 5</th>
+                            <th>Thứ 6</th>
                           </tr>
                         </thead>
                         <tbody>
-                          <tr
-                            v-for="item in getScheduleByTeacher(swapData.from.teacherId)"
-                            :key="item.id"
-                            :class="{ 'table-primary': item.id === swapData.from.id }"
-                          >
-                            <td>
-                              <strong>{{ getDayName(item.dayId) }}</strong>
+                          <!-- Buổi sáng -->
+                          <tr>
+                            <td rowspan="5" class="bg-light font-weight-bold">Sáng</td>
+                            <td
+                              v-for="day in days"
+                              :key="day.id"
+                              :class="{
+                                'bg-primary text-white': isCurrentCell(
+                                  'Sáng',
+                                  day.name,
+                                  1,
+                                  swapData.from
+                                ),
+                              }"
+                            >
+                              {{
+                                getTeacherScheduleCell(
+                                  "Sáng",
+                                  day.name,
+                                  1,
+                                  swapData.from.teacherId
+                                )
+                              }}
                             </td>
-                            <td>{{ item.sessionType }}</td>
-                            <td>Tiết {{ item.period }}</td>
-                            <td>
-                              <em>{{ getClassName(item.classId) }}</em>
+                          </tr>
+                          <tr v-for="period in [2, 3, 4, 5]" :key="period">
+                            <td
+                              v-for="day in days"
+                              :key="day.id"
+                              :class="{
+                                'bg-primary text-white': isCurrentCell(
+                                  'Sáng',
+                                  day.name,
+                                  period,
+                                  swapData.from
+                                ),
+                              }"
+                            >
+                              {{
+                                getTeacherScheduleCell(
+                                  "Sáng",
+                                  day.name,
+                                  period,
+                                  swapData.from.teacherId
+                                )
+                              }}
                             </td>
-                            <td>{{ getSubjectNameById(item.subjectId) }}</td>
+                          </tr>
+
+                          <!-- Buổi chiều -->
+                          <tr>
+                            <td rowspan="5" class="bg-light font-weight-bold">Chiều</td>
+                            <td
+                              v-for="day in days"
+                              :key="day.id"
+                              :class="{
+                                'bg-primary text-white': isCurrentCell(
+                                  'Chiều',
+                                  day.name,
+                                  1,
+                                  swapData.from
+                                ),
+                              }"
+                            >
+                              {{
+                                getTeacherScheduleCell(
+                                  "Chiều",
+                                  day.name,
+                                  1,
+                                  swapData.from.teacherId
+                                )
+                              }}
+                            </td>
+                          </tr>
+                          <tr v-for="period in [2, 3, 4, 5]" :key="period">
+                            <td
+                              v-for="day in days"
+                              :key="day.id"
+                              :class="{
+                                'bg-primary text-white': isCurrentCell(
+                                  'Chiều',
+                                  day.name,
+                                  period,
+                                  swapData.from
+                                ),
+                              }"
+                            >
+                              {{
+                                getTeacherScheduleCell(
+                                  "Chiều",
+                                  day.name,
+                                  period,
+                                  swapData.from.teacherId
+                                )
+                              }}
+                            </td>
                           </tr>
                         </tbody>
                       </table>
@@ -252,31 +335,114 @@
                       class="table-responsive"
                       style="max-height: 300px; overflow-y: auto"
                     >
-                      <table class="table table-sm table-hover mb-0">
-                        <thead class="thead-light sticky-top">
+                      <table class="table table-sm table-bordered mb-0">
+                        <thead class="thead-light">
                           <tr>
-                            <th width="15%">Thứ</th>
-                            <th width="15%">Buổi</th>
-                            <th width="15%">Tiết</th>
-                            <th width="25%">Lớp</th>
-                            <th width="30%">Môn học</th>
+                            <th>Buổi</th>
+                            <th>Thứ 2</th>
+                            <th>Thứ 3</th>
+                            <th>Thứ 4</th>
+                            <th>Thứ 5</th>
+                            <th>Thứ 6</th>
                           </tr>
                         </thead>
                         <tbody>
-                          <tr
-                            v-for="item in getScheduleByTeacher(swapData.to.teacherId)"
-                            :key="item.id"
-                            :class="{ 'table-success': item.id === swapData.to.id }"
-                          >
-                            <td>
-                              <strong>{{ getDayName(item.dayId) }}</strong>
+                          <!-- Buổi sáng -->
+                          <tr>
+                            <td rowspan="5" class="bg-light font-weight-bold">Sáng</td>
+                            <td
+                              v-for="day in days"
+                              :key="day.id"
+                              :class="{
+                                'bg-success text-white': isCurrentCell(
+                                  'Sáng',
+                                  day.name,
+                                  1,
+                                  swapData.to
+                                ),
+                              }"
+                            >
+                              {{
+                                getTeacherScheduleCell(
+                                  "Sáng",
+                                  day.name,
+                                  1,
+                                  swapData.to.teacherId
+                                )
+                              }}
                             </td>
-                            <td>{{ item.sessionType }}</td>
-                            <td>Tiết {{ item.period }}</td>
-                            <td>
-                              <em>{{ getClassName(item.classId) }}</em>
+                          </tr>
+                          <tr v-for="period in [2, 3, 4, 5]" :key="period">
+                            <td
+                              v-for="day in days"
+                              :key="day.id"
+                              :class="{
+                                'bg-success text-white': isCurrentCell(
+                                  'Sáng',
+                                  day.name,
+                                  period,
+                                  swapData.to
+                                ),
+                              }"
+                            >
+                              {{
+                                getTeacherScheduleCell(
+                                  "Sáng",
+                                  day.name,
+                                  period,
+                                  swapData.to.teacherId
+                                )
+                              }}
                             </td>
-                            <td>{{ getSubjectNameById(item.subjectId) }}</td>
+                          </tr>
+
+                          <!-- Buổi chiều -->
+                          <tr>
+                            <td rowspan="5" class="bg-light font-weight-bold">Chiều</td>
+                            <td
+                              v-for="day in days"
+                              :key="day.id"
+                              :class="{
+                                'bg-success text-white': isCurrentCell(
+                                  'Chiều',
+                                  day.name,
+                                  1,
+                                  swapData.to
+                                ),
+                              }"
+                            >
+                              {{
+                                getTeacherScheduleCell(
+                                  "Chiều",
+                                  day.name,
+                                  1,
+                                  swapData.to.teacherId
+                                )
+                              }}
+                            </td>
+                          </tr>
+                          <tr v-for="period in [2, 3, 4, 5]" :key="period">
+                            <td
+                              v-for="day in days"
+                              :key="day.id"
+                              :class="{
+                                'bg-success text-white': isCurrentCell(
+                                  'Chiều',
+                                  day.name,
+                                  period,
+                                  swapData.to
+                                ),
+                              }"
+                            >
+                              {{
+                                getTeacherScheduleCell(
+                                  "Chiều",
+                                  day.name,
+                                  period,
+                                  swapData.to.teacherId
+                                )
+                              }}
+                            </td>
                           </tr>
                         </tbody>
                       </table>
@@ -317,7 +483,7 @@
             </button>
           </div>
           <div class="modal-body">
-            <p>Bạn chỉ có thể đổi các tiết trong cùng một lớp!</p>
+            <p>Bạn chỉ có thể đổi các tiết trong cùng một lớp c!</p>
             <p>Không thể đổi tiết giữa các lớp khác nhau.</p>
           </div>
           <div class="modal-footer">
@@ -491,6 +657,37 @@ export default {
         this.dragData = null;
       }
     },
+    //Phần model đổi tiết
+    isCurrentCell(session, dayName, period, swapInfo) {
+      if (!swapInfo || !swapInfo.dayId) return false;
+      return (
+        this.getDayName(swapInfo.dayId) === dayName &&
+        swapInfo.sessionType === session &&
+        swapInfo.period === period
+      );
+    },
+
+    getTeacherScheduleCell(session, dayName, period, teacherId) {
+      if (!teacherId) return "";
+
+      const day = this.days.find((d) => d.name === dayName);
+      if (!day) return "";
+
+      const lesson = this.schedule.find(
+        (item) =>
+          item.dayId === day.id &&
+          item.sessionType === session &&
+          item.period === period &&
+          item.teacherId === teacherId
+      );
+
+      if (!lesson) return "";
+
+      const className = this.getClassName(lesson.classId);
+      const subjectName = this.getSubjectNameById(lesson.subjectId);
+
+      return `${className}\n${subjectName}`;
+    },
 
     handleDrop(day, session, period, cls) {
       if (!this.dragData) return;
@@ -610,5 +807,16 @@ div[draggable="true"]:active {
 
 .modal-lg {
   max-width: 900px;
+}
+.table-sm td {
+  height: 60px;
+  white-space: pre-line;
+  vertical-align: middle;
+  padding: 0.25rem !important;
+}
+
+.table-sm th {
+  vertical-align: middle;
+  padding: 0.5rem !important;
 }
 </style>
