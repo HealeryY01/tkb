@@ -1,24 +1,21 @@
 <template>
   <div class="container-fluid mt-4">
-    <div class="card shadow-sm">
+    <div class="card">
       <div class="card-header bg-primary text-white">
-        <h4 class="mb-0 font-weight-bold">THỜI KHÓA BIỂU GIÁO VIÊN</h4>
+        <h4 class="mb-0">Thời Khóa Biểu Giáo Viên</h4>
       </div>
       <div class="card-body p-0">
         <div class="table-responsive">
           <table class="table table-bordered mb-0">
-            <thead class="thead-light">
+            <thead>
               <tr>
-                <th rowspan="3" class="sticky-column bg-light font-weight-bold">
-                  GIÁO VIÊN
-                </th>
+                <th rowspan="3" class="sticky-column">Giáo viên</th>
                 <th
                   v-for="day in days"
                   :key="'day-' + day.id"
                   :colspan="sessions.length * periods.length"
-                  class="text-center font-weight-bold"
                 >
-                  {{ day.name.toUpperCase() }}
+                  {{ day.name }}
                 </th>
               </tr>
               <tr>
@@ -27,9 +24,8 @@
                     v-for="session in sessions"
                     :key="'session-' + day.id + '-' + session.type"
                     :colspan="periods.length"
-                    class="text-center font-weight-medium"
                   >
-                    {{ session.name }}
+                    {{ session.label }}
                   </th>
                 </template>
               </tr>
@@ -38,10 +34,9 @@
                   <template v-for="session in sessions">
                     <th
                       v-for="period in periods"
-                      :key="'period-' + day.id + '-' + session.type + '-' + period.id"
-                      class="text-center"
+                      :key="'period-' + day.id + '-' + session.type + '-' + period"
                     >
-                      Tiết {{ period.id }}
+                      Tiết {{ period }}
                     </th>
                   </template>
                 </template>
@@ -49,9 +44,7 @@
             </thead>
             <tbody>
               <tr v-for="teacher in teachers" :key="'teacher-' + teacher.id">
-                <td class="teacher-name sticky-column font-weight-bold bg-light">
-                  {{ teacher.name }}
-                </td>
+                <td class="teacher-name sticky-column">{{ teacher.name }}</td>
                 <template v-for="day in days">
                   <template v-for="session in sessions">
                     <td
@@ -64,13 +57,12 @@
                         '-' +
                         session.type +
                         '-' +
-                        period.id
+                        period
                       "
-                      class="border-right border-bottom"
                     >
                       <template
                         v-if="
-                          getTeacherLessons(teacher.id, day.id, period.id, session.type)
+                          getTeacherLessons(teacher.id, day.id, session.type, period)
                             .length > 0
                         "
                       >
@@ -78,18 +70,14 @@
                           v-for="lesson in getTeacherLessons(
                             teacher.id,
                             day.id,
-                            period.id,
-                            session.type
+                            session.type,
+                            period
                           )"
                           :key="'lesson-' + lesson.id"
-                          class="lesson-item p-2"
+                          class="lesson-item"
                         >
-                          <div class="font-weight-medium">
-                            {{ getSubjectName(lesson.subjectId) }}
-                          </div>
-                          <div class="text-muted small">
-                            {{ getClassName(lesson.classId) }}
-                          </div>
+                          {{ getSubjectName(lesson.subjectId) }}<br />
+                          {{ getClassName(lesson.classId) }}
                         </div>
                       </template>
                     </td>
@@ -117,10 +105,10 @@ export default {
         { id: 5, name: "Thứ 6" },
       ],
       sessions: [
-        { type: "morning", name: "Sáng" },
-        { type: "afternoon", name: "Chiều" },
+        { type: "Sáng", label: "Sáng" },
+        { type: "Chiều", label: "Chiều" },
       ],
-      periods: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }],
+      periods: [1, 2, 3, 4, 5],
       teachers: [
         { id: 1, name: "Lê Văn Bảy" },
         { id: 2, name: "Nguyễn Thị Bé" },
@@ -156,8 +144,8 @@ export default {
         {
           id: 1,
           dayId: 1,
+          sessionType: "Sáng",
           period: 1,
-          sessionType: "morning",
           classId: 1,
           subjectId: 1,
           teacherId: 1,
@@ -165,8 +153,8 @@ export default {
         {
           id: 2,
           dayId: 1,
+          sessionType: "Sáng",
           period: 2,
-          sessionType: "morning",
           classId: 1,
           subjectId: 2,
           teacherId: 3,
@@ -174,8 +162,8 @@ export default {
         {
           id: 3,
           dayId: 2,
+          sessionType: "Sáng",
           period: 2,
-          sessionType: "afternoon",
           classId: 1,
           subjectId: 2,
           teacherId: 2,
@@ -183,41 +171,23 @@ export default {
         {
           id: 4,
           dayId: 3,
+          sessionType: "Chiều",
           period: 3,
-          sessionType: "morning",
           classId: 2,
           subjectId: 3,
           teacherId: 3,
-        },
-        {
-          id: 5,
-          dayId: 4,
-          period: 1,
-          sessionType: "morning",
-          classId: 2,
-          subjectId: 4,
-          teacherId: 4,
-        },
-        {
-          id: 6,
-          dayId: 5,
-          period: 4,
-          sessionType: "afternoon",
-          classId: 3,
-          subjectId: 1,
-          teacherId: 5,
         },
       ],
     };
   },
   methods: {
-    getTeacherLessons(teacherId, dayId, periodId, sessionType) {
+    getTeacherLessons(teacherId, dayId, sessionType, period) {
       return this.schedule.filter(
         (lesson) =>
           lesson.teacherId === teacherId &&
           lesson.dayId === dayId &&
-          lesson.period === periodId &&
-          lesson.sessionType === sessionType
+          lesson.sessionType === sessionType &&
+          lesson.period === period
       );
     },
     getSubjectName(subjectId) {
@@ -237,94 +207,76 @@ export default {
 
 <style scoped>
 .card {
-  border: none;
-  border-radius: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 0;
 }
 
 .card-header {
-  border-radius: 0.5rem 0.5rem 0 0 !important;
-  padding: 1rem 1.5rem;
+  background-color: #337ab7;
+  border-radius: 0;
+  padding: 10px 15px;
+}
+
+.card-header h4 {
+  font-size: 16px;
+  font-weight: bold;
+  margin: 0;
 }
 
 .table {
-  font-size: 0.875rem;
-  min-width: 2000px;
+  font-size: 14px;
+  margin-bottom: 0;
+  min-width: 100%;
 }
 
 .table th {
+  background-color: #f5f5f5;
+  border: 1px solid #ddd !important;
+  font-weight: normal;
+  padding: 8px;
   text-align: center;
   vertical-align: middle;
-  white-space: nowrap;
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background-color: #f8f9fa;
-  border-bottom: 2px solid #dee2e6;
 }
 
 .table td {
+  border: 1px solid #ddd !important;
+  height: 60px;
+  padding: 5px;
   vertical-align: top;
-  min-width: 100px;
-  height: 70px;
-  padding: 0;
 }
 
 .teacher-name {
-  font-weight: 600;
-  white-space: nowrap;
+  font-weight: bold;
   min-width: 150px;
-  position: sticky;
-  left: 0;
-  z-index: 1;
-  background-color: #f8f9fa;
-  border-right: 1px solid #dee2e6;
+  white-space: nowrap;
 }
 
 .sticky-column {
+  background-color: #fff;
   position: sticky;
   left: 0;
-  z-index: 3;
-  background-color: #f8f9fa;
+  z-index: 1;
 }
 
 .table-responsive {
-  position: relative;
-  max-height: 80vh;
-  overflow: auto;
+  overflow-x: auto;
 }
 
 .lesson-item {
   height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  border-bottom: 1px solid #f0f0f0;
+  text-align: center;
 }
 
-.lesson-item:last-child {
-  border-bottom: none;
+.table-bordered {
+  border: 1px solid #ddd;
 }
 
-.table-bordered thead th {
-  border-bottom-width: 2px;
-}
-
-.table-bordered th,
-.table-bordered td {
-  border: 1px solid #e0e0e0;
-}
-
-.table thead th {
-  vertical-align: bottom;
-  border-bottom: 2px solid #dee2e6;
-}
-
-.border-right {
-  border-right: 1px solid #e0e0e0 !important;
-}
-
-.border-bottom {
-  border-bottom: 1px solid #e0e0e0 !important;
+.table-bordered > thead > tr > th,
+.table-bordered > tbody > tr > th,
+.table-bordered > tfoot > tr > th,
+.table-bordered > thead > tr > td,
+.table-bordered > tbody > tr > td,
+.table-bordered > tfoot > tr > td {
+  border: 1px solid #ddd;
 }
 </style>
