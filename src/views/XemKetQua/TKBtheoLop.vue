@@ -6,12 +6,7 @@
       <!-- Thêm combobox chọn lớp -->
       <div class="form-group mb-3">
         <label for="classSelect">Chọn lớp:</label>
-        <select
-          id="classSelect"
-          class="form-control"
-          v-model="selectedClass[grade.id]"
-          @change="onClassChange(grade.id)"
-        >
+        <select id="classSelect" class="form-control" v-model="selectedClass[grade.id]">
           <option value="">-- Chọn lớp --</option>
           <option
             v-for="classItem in grade.classes"
@@ -206,47 +201,34 @@
                       class="table-responsive"
                       style="max-height: 300px; overflow-y: auto"
                     >
+                      <!-- Phần bảng của giáo viên 1 -->
                       <table class="table table-sm table-bordered mb-0">
                         <thead class="thead-light">
                           <tr>
                             <th>Buổi</th>
-                            <th>Thứ 2</th>
-                            <th>Thứ 3</th>
-                            <th>Thứ 4</th>
-                            <th>Thứ 5</th>
-                            <th>Thứ 6</th>
+                            <th>Tiết</th>
+                            <th v-for="day in days" :key="`header-${day.id}`">
+                              {{ day.name }}
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
                           <!-- Buổi sáng -->
-                          <tr>
-                            <td rowspan="5" class="bg-light font-weight-bold">Sáng</td>
+                          <tr
+                            v-for="(period, index) in periods"
+                            :key="`morning-row-${period}`"
+                          >
                             <td
-                              v-for="day in days"
-                              :key="day.id"
-                              :class="{
-                                'bg-primary text-white': isCurrentCell(
-                                  'Sáng',
-                                  day.name,
-                                  1,
-                                  swapData.from
-                                ),
-                              }"
+                              v-if="index === 0"
+                              rowspan="5"
+                              class="bg-light font-weight-bold"
                             >
-                              {{
-                                getTeacherScheduleCell(
-                                  "Sáng",
-                                  day.name,
-                                  1,
-                                  swapData.from.teacherId
-                                )
-                              }}
+                              Sáng
                             </td>
-                          </tr>
-                          <tr v-for="period in [2, 3, 4, 5]" :key="period">
+                            <td class="font-weight-bold">{{ period }}</td>
                             <td
                               v-for="day in days"
-                              :key="day.id"
+                              :key="`morning-${day.id}-${period}`"
                               :class="{
                                 'bg-primary text-white': isCurrentCell(
                                   'Sáng',
@@ -268,34 +250,21 @@
                           </tr>
 
                           <!-- Buổi chiều -->
-                          <tr>
-                            <td rowspan="5" class="bg-light font-weight-bold">Chiều</td>
+                          <tr
+                            v-for="(period, index) in periods"
+                            :key="`afternoon-row-${period}`"
+                          >
                             <td
-                              v-for="day in days"
-                              :key="day.id"
-                              :class="{
-                                'bg-primary text-white': isCurrentCell(
-                                  'Chiều',
-                                  day.name,
-                                  1,
-                                  swapData.from
-                                ),
-                              }"
+                              v-if="index === 0"
+                              rowspan="5"
+                              class="bg-light font-weight-bold"
                             >
-                              {{
-                                getTeacherScheduleCell(
-                                  "Chiều",
-                                  day.name,
-                                  1,
-                                  swapData.from.teacherId
-                                )
-                              }}
+                              Chiều
                             </td>
-                          </tr>
-                          <tr v-for="period in [2, 3, 4, 5]" :key="period">
+                            <td class="font-weight-bold">{{ period }}</td>
                             <td
                               v-for="day in days"
-                              :key="day.id"
+                              :key="`afternoon-${day.id}-${period}`"
                               :class="{
                                 'bg-primary text-white': isCurrentCell(
                                   'Chiều',
@@ -335,47 +304,34 @@
                       class="table-responsive"
                       style="max-height: 300px; overflow-y: auto"
                     >
+                      <!-- Phần bảng của giáo viên 2 -->
                       <table class="table table-sm table-bordered mb-0">
                         <thead class="thead-light">
                           <tr>
                             <th>Buổi</th>
-                            <th>Thứ 2</th>
-                            <th>Thứ 3</th>
-                            <th>Thứ 4</th>
-                            <th>Thứ 5</th>
-                            <th>Thứ 6</th>
+                            <th>Tiết</th>
+                            <th v-for="day in days" :key="`to-header-${day.id}`">
+                              {{ day.name }}
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
                           <!-- Buổi sáng -->
-                          <tr>
-                            <td rowspan="5" class="bg-light font-weight-bold">Sáng</td>
+                          <tr
+                            v-for="(period, index) in periods"
+                            :key="`to-morning-row-${period}`"
+                          >
                             <td
-                              v-for="day in days"
-                              :key="day.id"
-                              :class="{
-                                'bg-success text-white': isCurrentCell(
-                                  'Sáng',
-                                  day.name,
-                                  1,
-                                  swapData.to
-                                ),
-                              }"
+                              v-if="index === 0"
+                              rowspan="5"
+                              class="bg-light font-weight-bold"
                             >
-                              {{
-                                getTeacherScheduleCell(
-                                  "Sáng",
-                                  day.name,
-                                  1,
-                                  swapData.to.teacherId
-                                )
-                              }}
+                              Sáng
                             </td>
-                          </tr>
-                          <tr v-for="period in [2, 3, 4, 5]" :key="period">
+                            <td class="font-weight-bold">{{ period }}</td>
                             <td
                               v-for="day in days"
-                              :key="day.id"
+                              :key="`to-morning-${day.id}-${period}`"
                               :class="{
                                 'bg-success text-white': isCurrentCell(
                                   'Sáng',
@@ -397,34 +353,21 @@
                           </tr>
 
                           <!-- Buổi chiều -->
-                          <tr>
-                            <td rowspan="5" class="bg-light font-weight-bold">Chiều</td>
+                          <tr
+                            v-for="(period, index) in periods"
+                            :key="`to-afternoon-row-${period}`"
+                          >
                             <td
-                              v-for="day in days"
-                              :key="day.id"
-                              :class="{
-                                'bg-success text-white': isCurrentCell(
-                                  'Chiều',
-                                  day.name,
-                                  1,
-                                  swapData.to
-                                ),
-                              }"
+                              v-if="index === 0"
+                              rowspan="5"
+                              class="bg-light font-weight-bold"
                             >
-                              {{
-                                getTeacherScheduleCell(
-                                  "Chiều",
-                                  day.name,
-                                  1,
-                                  swapData.to.teacherId
-                                )
-                              }}
+                              Chiều
                             </td>
-                          </tr>
-                          <tr v-for="period in [2, 3, 4, 5]" :key="period">
+                            <td class="font-weight-bold">{{ period }}</td>
                             <td
                               v-for="day in days"
-                              :key="day.id"
+                              :key="`to-afternoon-${day.id}-${period}`"
                               :class="{
                                 'bg-success text-white': isCurrentCell(
                                   'Chiều',
@@ -467,7 +410,7 @@
 
     <!-- Thêm modal thông báo lỗi -->
     <div
-      ref="errorModal"
+      ref="errorModal_2"
       class="modal fade"
       tabindex="-1"
       role="dialog"
@@ -485,6 +428,24 @@
           <div class="modal-body">
             <p>Bạn chỉ có thể đổi các tiết trong cùng một lớp c!</p>
             <p>Không thể đổi tiết giữa các lớp khác nhau.</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">
+              Đóng
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" ref="errorModal_1" tabindex="-1" role="dialog">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Không thể đổi chỗ chính tiết đó cho tiết đó được!</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-dismiss="modal">
@@ -557,7 +518,7 @@ export default {
           teacherId: 1,
         },
         {
-          id: 1,
+          id: 2,
           dayId: 1,
           sessionType: "Sáng",
           period: 2,
@@ -566,7 +527,7 @@ export default {
           teacherId: 3,
         },
         {
-          id: 2,
+          id: 3,
           dayId: 2,
           sessionType: "Sáng",
           period: 2,
@@ -575,7 +536,7 @@ export default {
           teacherId: 2,
         },
         {
-          id: 3,
+          id: 4,
           dayId: 3,
           sessionType: "Chiều",
           period: 3,
@@ -692,9 +653,23 @@ export default {
     handleDrop(day, session, period, cls) {
       if (!this.dragData) return;
 
+      // Kiểm tra nếu thả vào chính ô đã kéo
+      if (
+        this.dragData.dayId === day.id &&
+        this.dragData.sessionType === session.type &&
+        this.dragData.period === period &&
+        this.dragData.classId === cls.id
+      ) {
+        // Hiển thị thông báo lỗi
+        this.errorMessage = "Không thể kéo và thả vào chính ô này";
+        $(this.$refs.errorModal_1).modal("show");
+        return;
+      }
+
       // Không cho phép đổi giữa các lớp khác nhau
       if (this.dragData.classId !== cls.id) {
-        $(this.$refs.errorModal).modal("show");
+        this.errorMessage = "Không thể đổi tiết giữa các lớp khác nhau";
+        $(this.$refs.errorModal_2).modal("show");
         return;
       }
 
