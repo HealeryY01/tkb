@@ -5,8 +5,18 @@
         <h4 class="mb-0">Thời Khóa Biểu Giáo Viên</h4>
       </div>
       <div class="card-body p-0">
+        <!-- Thêm thông báo lỗi -->
+        <div
+          v-if="errorMessage"
+          class="alert alert-danger alert-dismissible fade show m-3"
+          role="alert"
+        >
+          {{ errorMessage }}
+        </div>
+
         <div class="table-responsive">
           <table class="table table-bordered mb-0">
+            <!-- Phần header giữ nguyên như cũ -->
             <thead>
               <tr>
                 <th rowspan="3" class="sticky-column">Giáo viên</th>
@@ -42,6 +52,8 @@
                 </template>
               </tr>
             </thead>
+
+            <!-- Phần body với các sự kiện drag/drop -->
             <tbody>
               <tr v-for="teacher in teachers" :key="'teacher-' + teacher.id">
                 <td class="teacher-name sticky-column">{{ teacher.name }}</td>
@@ -59,6 +71,9 @@
                         '-' +
                         period
                       "
+                      @dragover.prevent="onDragOver($event)"
+                      @dragenter.prevent="onDragEnter($event, teacher.id)"
+                      @drop="onDrop($event, teacher.id, day.id, session.type, period)"
                     >
                       <template
                         v-if="
@@ -75,6 +90,9 @@
                           )"
                           :key="'lesson-' + lesson.id"
                           class="lesson-item"
+                          draggable="true"
+                          @dragstart="onDragStart($event, lesson)"
+                          @dragend="onDragEnd($event)"
                         >
                           {{ getSubjectName(lesson.subjectId) }}<br />
                           {{ getClassName(lesson.classId) }}
@@ -178,6 +196,9 @@ export default {
           teacherId: 3,
         },
       ],
+      draggedLesson: null,
+      currentHoverTeacherId: null,
+      errorMessage: "",
     };
   },
   methods: {
@@ -200,6 +221,102 @@ export default {
         if (cls) return cls.name;
       }
       return "";
+    },
+
+    // Drag and Drop methods
+    onDragStart(event, lesson) {
+      this.draggedLesson = lesson;
+      event.target.classList.add("dragging");
+      event.dataTransfer.setData("text/plain", lesson.id);
+      event.dataTransfer.effectAllowed = "move";
+      this.errorMessage = "";
+    },
+
+    onDragEnd(event) {
+      event.target.classList.remove("dragging");
+      this.currentHoverTeacherId = null;
+    },
+
+    onDragOver(event) {
+      const container = event.currentTarget.closest(".table-responsive");
+      const rect = container.getBoundingClientRect();
+
+      const scrollThreshold = 80;
+      const scrollSpeed = 10;
+
+      const clientX = event.clientX;
+
+      // Cuộn sang phải
+      if (clientX > rect.right - scrollThreshold) {
+        if (container.scrollLeft + container.clientWidth < container.scrollWidth) {
+          container.scrollLeft += scrollSpeed;
+        }
+      }
+      // Cuộn sang trái
+      else if (clientX < rect.left + scrollThreshold) {
+        if (container.scrollLeft > 0) {
+          container.scrollLeft -= scrollSpeed;
+        }
+      }
+
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+    },
+
+    onDragEnter(event, teacherId) {
+      event.preventDefault();
+      this.currentHoverTeacherId = teacherId;
+    },
+
+    onDrop(event, teacherId, dayId, sessionType, period) {
+      event.preventDefault();
+      this.currentHoverTeacherId = null;
+
+      // Kiểm tra nếu không phải cùng giáo viên
+      if (this.draggedLesson.teacherId !== teacherId) {
+        this.showError("Không thể chuyển tiết học sang giáo viên khác!");
+        return;
+      }
+
+      // Kiểm tra nếu đang kéo đến cùng vị trí
+      if (
+        this.draggedLesson.dayId === dayId &&
+        this.draggedLesson.sessionType === sessionType &&
+        this.draggedLesson.period === period
+      ) {
+        return;
+      }
+
+      // Cập nhật vị trí mới cho tiết học
+      const lessonIndex = this.schedule.findIndex((l) => l.id === this.draggedLesson.id);
+      if (lessonIndex !== -1) {
+        this.schedule[lessonIndex] = {
+          ...this.schedule[lessonIndex],
+          dayId,
+          sessionType,
+          period,
+        };
+      }
+
+      // Force update để render lại
+      this.$forceUpdate();
+    },
+    showError(message, duration = 2000) {
+      this.errorMessage = message;
+      // Thêm hiệu ứng fade out trước khi xóa
+      setTimeout(() => {
+        const alertElement = document.querySelector(".alert");
+        if (alertElement) {
+          alertElement.classList.add("fade-out");
+
+          // Xóa sau khi hiệu ứng hoàn thành
+          setTimeout(() => {
+            this.errorMessage = "";
+          }, 500);
+        } else {
+          this.errorMessage = "";
+        }
+      }, duration);
     },
   },
 };
@@ -261,10 +378,23 @@ export default {
 .table-responsive {
   overflow-x: auto;
 }
+/* .table-responsive {
+  scroll-behavior: smooth;
+} */
 
 .lesson-item {
   height: 100%;
   text-align: center;
+  cursor: move;
+  background-color: #e3f2fd;
+  border-radius: 4px;
+  padding: 2px;
+  margin: 2px;
+}
+
+.lesson-item.dragging {
+  opacity: 0.5;
+  background-color: #bbdefb;
 }
 
 .table-bordered {
@@ -278,5 +408,31 @@ export default {
 .table-bordered > tbody > tr > td,
 .table-bordered > tfoot > tr > td {
   border: 1px solid #ddd;
+}
+
+/* Style cho thông báo lỗi */
+.alert {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  min-width: 300px;
+  animation: slideIn 0.3s ease-out;
+  transition: opacity 0.5s ease-out;
+}
+
+.alert.fade-out {
+  opacity: 0;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 </style>

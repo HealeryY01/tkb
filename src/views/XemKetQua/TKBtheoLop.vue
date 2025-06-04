@@ -442,7 +442,7 @@
       <div class="modal-dialog" role="document">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title">Không thể đổi chỗ chính tiết đó cho tiết đó được!</h5>
+            <h5 class="modal-title">Không thể đổi chính tiết đó cho tiết đó được!</h5>
             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
               <span aria-hidden="true">&times;</span>
             </button>
@@ -709,38 +709,59 @@ export default {
     },
 
     confirmSwap() {
+      // Tìm index của các tiết học
       const fromIndex = this.schedule.findIndex(
-        (item) =>
-          item.dayId === this.swapData.from.dayId &&
-          item.sessionType === this.swapData.from.sessionType &&
-          item.period === this.swapData.from.period &&
-          item.classId === this.swapData.from.classId
+        (item) => item.id === this.swapData.from.lessonId
       );
 
       const toIndex = this.schedule.findIndex(
-        (item) =>
-          item.dayId === this.swapData.to.dayId &&
-          item.sessionType === this.swapData.to.sessionType &&
-          item.period === this.swapData.to.period &&
-          item.classId === this.swapData.to.classId
+        (item) => item.id === (this.swapData.to.lessonId || -1)
       );
 
-      // Thực hiện đổi dữ liệu
+      // Tạo bản sao của mảng để đảm bảo reactivity
+      const newSchedule = [...this.schedule];
+
       if (fromIndex !== -1) {
         if (toIndex !== -1) {
-          // Đổi tiết giữa 2 tiết có bài học
-          const temp = { ...this.schedule[fromIndex] };
-          this.schedule[fromIndex] = { ...this.schedule[toIndex], id: temp.id };
-          this.schedule[toIndex] = { ...temp, id: this.schedule[toIndex].id };
+          // Trường hợp 1: Hoán đổi 2 tiết học có sẵn
+          // Tạo bản sao các tiết học
+          const fromLesson = { ...newSchedule[fromIndex] };
+          const toLesson = { ...newSchedule[toIndex] };
+
+          // Giữ nguyên ID của mỗi tiết học, chỉ hoán đổi nội dung
+          newSchedule[fromIndex] = {
+            ...toLesson,
+            id: fromLesson.id, // Giữ nguyên ID gốc
+            dayId: fromLesson.dayId,
+            sessionType: fromLesson.sessionType,
+            period: fromLesson.period,
+            classId: fromLesson.classId,
+          };
+
+          newSchedule[toIndex] = {
+            ...fromLesson,
+            id: toLesson.id, // Giữ nguyên ID gốc
+            dayId: toLesson.dayId,
+            sessionType: toLesson.sessionType,
+            period: toLesson.period,
+            classId: toLesson.classId,
+          };
         } else {
-          // Di chuyển từ có bài học sang ô trống
-          this.schedule[fromIndex].dayId = this.swapData.to.dayId;
-          this.schedule[fromIndex].sessionType = this.swapData.to.sessionType;
-          this.schedule[fromIndex].period = this.swapData.to.period;
+          // Trường hợp 2: Di chuyển tiết học sang ô trống
+          newSchedule[fromIndex] = {
+            ...newSchedule[fromIndex],
+            dayId: this.swapData.to.dayId,
+            sessionType: this.swapData.to.sessionType,
+            period: this.swapData.to.period,
+          };
         }
+
+        // Cập nhật lại schedule
+        this.schedule = newSchedule;
       }
 
       this.cancelSwap();
+      this.$forceUpdate(); // Đảm bảo UI cập nhật
     },
 
     getScheduleByTeacher(teacherId) {
