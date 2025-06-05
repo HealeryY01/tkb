@@ -474,7 +474,7 @@ export default {
       ],
       sessions: [
         { type: "Sáng", label: "Sáng" },
-        { type: "Chiều", label: "Chiều" },
+        // { type: "Chiều", label: "Chiều" },
       ],
       periods: [1, 2, 3, 4, 5],
       grades: [
