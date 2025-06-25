@@ -1,13 +1,25 @@
-const { defineConfig } = require("@vue/cli-service");
-module.exports = defineConfig({
-  transpileDependencies: true,
-});
-// vue.config.js
+const path = require("path");
+
 module.exports = {
+  transpileDependencies: true,
+
+  // Proxy để tránh lỗi CORS & fetch thất bại
+  devServer: {
+    proxy: {
+      "/api": {
+        target: "http://localhost/backend_tkb",
+        changeOrigin: true,
+        pathRewrite: {
+          "^/api": "/api",
+        },
+      },
+    },
+  },
+
   configureWebpack: {
     resolve: {
       alias: {
-        "@": require("path").resolve(__dirname, "src"),
+        "@": path.resolve(__dirname, "src"),
       },
     },
   },

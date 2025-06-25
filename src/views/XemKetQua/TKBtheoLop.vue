@@ -111,6 +111,7 @@
       role="dialog"
       aria-labelledby="swapModalLabel"
       aria-hidden="true"
+      v-if="swapData && isDataReady"
     >
       <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
@@ -139,9 +140,12 @@
                       </h6>
                     </div>
                     <div class="card-body">
-                      <h5 class="text-primary">{{ swapData.from.subjectName }}</h5>
-                      <p class="mb-1">
-                        <strong>Giáo viên:</strong> {{ swapData.from.teacherName }}
+                      <h5 class="text-primary">
+                        {{ swapData.from.subjectName || "Chưa có môn" }}
+                      </h5>
+                      <p>
+                        <strong>Giáo viên:</strong>
+                        {{ swapData.from.teacherName || "Chưa có GV" }}
                       </p>
                       <p class="mb-1">
                         <strong>Lớp:</strong> {{ getClassName(swapData.from.classId) }}
@@ -474,83 +478,83 @@ export default {
       ],
       sessions: [
         { type: "Sáng", label: "Sáng" },
-        // { type: "Chiều", label: "Chiều" },
+        { type: "Chiều", label: "Chiều" },
       ],
       periods: [1, 2, 3, 4, 5],
       grades: [
-        {
-          id: 1,
-          name: "Khối 1",
-          classes: [
-            { id: 1, name: "1A" },
-            { id: 2, name: "1B" },
-          ],
-        },
-        {
-          id: 2,
-          name: "Khối 2",
-          classes: [
-            { id: 3, name: "2A" },
-            { id: 4, name: "2B" },
-          ],
-        },
+        { id: 1, name: "Khối 1", classes: [] },
+        { id: 2, name: "Khối 2", classes: [] },
       ],
-      subjects: [
-        { id: 1, name: "Toán" },
-        { id: 2, name: "Văn" },
-        { id: 3, name: "Anh" },
-        { id: 4, name: "Lý" },
-      ],
-      teachers: [
-        { id: 1, name: "GV A" },
-        { id: 2, name: "GV B" },
-        { id: 3, name: "GV C" },
-        { id: 4, name: "GV D" },
-      ],
-      schedule: [
-        {
-          id: 1,
-          dayId: 1,
-          sessionType: "Sáng",
-          period: 1,
-          classId: 1,
-          subjectId: 1,
-          teacherId: 1,
-        },
-        {
-          id: 2,
-          dayId: 1,
-          sessionType: "Sáng",
-          period: 2,
-          classId: 1,
-          subjectId: 2,
-          teacherId: 3,
-        },
-        {
-          id: 3,
-          dayId: 2,
-          sessionType: "Sáng",
-          period: 2,
-          classId: 1,
-          subjectId: 2,
-          teacherId: 2,
-        },
-        {
-          id: 4,
-          dayId: 3,
-          sessionType: "Chiều",
-          period: 3,
-          classId: 2,
-          subjectId: 3,
-          teacherId: 3,
-        },
-      ],
+      subjects: [],
+      teachers: [],
+      schedule: [],
       dragData: null,
       swapData: null,
       selectedClass: {},
+      isDataReady: false, // ✅ Đánh dấu dữ liệu đã sẵn sàng
     };
   },
+  created() {
+    // Tải song song cả giáo viên và môn học
+    Promise.all([
+      fetch("/api/get_subjects.php").then((res) => res.json()),
+      fetch("/api/get_teachers.php").then((res) => res.json()),
+    ])
+      .then(([subjectsData, teachersData]) => {
+        this.subjects = subjectsData;
+        this.teachers = teachersData;
+        this.isDataReady = true; // ✅ Đánh dấu đã xong
+      })
+      .catch((err) => console.error("Lỗi tải dữ liệu:", err));
+
+    // Lấy danh sách lớp cho từng khối
+    this.grades.forEach((grade) => {
+      this.fetchClasses(grade.id);
+    });
+  },
   methods: {
+    fetchClasses(gradeId) {
+      fetch(`/api/get_classes.php?grade_id=${gradeId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          const grade = this.grades.find((g) => g.id === gradeId);
+          if (grade) grade.classes = data;
+        })
+        .catch((err) => console.error("Lỗi khi lấy danh sách lớp:", err));
+    },
+    fetchSchedule(classId) {
+      fetch(`/api/get_schedule.php?class_id=${classId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            this.schedule = data.data;
+          } else {
+            console.error("Lỗi:", data.message);
+          }
+        })
+        .catch((err) => console.error("Lỗi fetch:", err));
+    },
+    getSelectedClass(gradeId) {
+      if (!this.selectedClass[gradeId]) return null;
+      const grade = this.grades.find((g) => g.id === gradeId);
+      return grade?.classes.find((c) => c.id === this.selectedClass[gradeId]) || null;
+    },
+    getSelectedClassName(gradeId) {
+      const selected = this.getSelectedClass(gradeId);
+      return selected ? selected.name : "";
+    },
+    getClassName(classId) {
+      const cls = this.grades.flatMap((g) => g.classes).find((c) => c.id === classId);
+      return cls ? cls.name : "";
+    },
+    getDayName(dayId) {
+      const day = this.days.find((d) => d.id === dayId);
+      return day ? day.name : "";
+    },
+    getSubjectNameById(subjectId) {
+      const subject = this.subjects.find((s) => String(s.id) === String(subjectId));
+      return subject ? subject.name : "";
+    },
     getLesson(day, session, period, cls) {
       return this.schedule.find(
         (item) =>
@@ -571,114 +575,39 @@ export default {
     getTeacherName(day, session, period, classItem) {
       const lesson = this.getLesson(day, session, period, classItem);
       if (lesson) {
-        const teacher = this.teachers.find((t) => t.id === lesson.teacherId);
+        const teacher = this.teachers.find(
+          (t) => String(t.id) === String(lesson.teacherId)
+        );
         return teacher ? teacher.name : "";
       }
       return "";
     },
-    getSubjectNameById(subjectId) {
-      const subject = this.subjects.find((s) => s.id === subjectId);
-      return subject ? subject.name : "";
-    },
-    getDayName(dayId) {
-      const day = this.days.find((d) => d.id === dayId);
-      return day ? day.name : "";
-    },
-    getClassName(classId) {
-      const cls = this.grades.flatMap((g) => g.classes).find((c) => c.id === classId);
-      return cls ? cls.name : "";
-    },
-    // Thêm các phương thức mới
-    getSelectedClass(gradeId) {
-      if (!this.selectedClass[gradeId]) return null;
-      const grade = this.grades.find((g) => g.id === gradeId);
-      return grade?.classes.find((c) => c.id === this.selectedClass[gradeId]) || null;
-    },
-
-    getSelectedClassName(gradeId) {
-      const selected = this.getSelectedClass(gradeId);
-      return selected ? selected.name : "";
-    },
-    handleDragStart(day, session, period, cls) {
-      const lesson = this.getLesson(day, session, period, cls);
-      if (lesson) {
-        this.dragData = {
-          dayId: day.id,
-          sessionType: session.type,
-          period: period,
-          classId: cls.id,
-          lessonId: lesson.id,
-          subjectId: lesson.subjectId,
-          teacherId: lesson.teacherId,
-          subjectName: this.getSubjectNameById(lesson.subjectId),
-          teacherName: this.teachers.find((t) => t.id === lesson.teacherId)?.name || "",
-        };
-      } else {
-        // Nếu không có tiết học thì không cho kéo
-        this.dragData = null;
-      }
-    },
-    //Phần model đổi tiết
-    isCurrentCell(session, dayName, period, swapInfo) {
-      if (!swapInfo || !swapInfo.dayId) return false;
-      return (
-        this.getDayName(swapInfo.dayId) === dayName &&
-        swapInfo.sessionType === session &&
-        swapInfo.period === period
-      );
-    },
-
-    getTeacherScheduleCell(session, dayName, period, teacherId) {
-      if (!teacherId) return "";
-
-      const day = this.days.find((d) => d.name === dayName);
-      if (!day) return "";
-
-      const lesson = this.schedule.find(
-        (item) =>
-          item.dayId === day.id &&
-          item.sessionType === session &&
-          item.period === period &&
-          item.teacherId === teacherId
-      );
-
-      if (!lesson) return "";
-
-      const className = this.getClassName(lesson.classId);
-      const subjectName = this.getSubjectNameById(lesson.subjectId);
-
-      return `${className}\n${subjectName}`;
-    },
-
     handleDrop(day, session, period, cls) {
       if (!this.dragData) return;
 
-      // Kiểm tra nếu thả vào chính ô đã kéo
+      if (!this.isDataReady) {
+        alert("Vui lòng đợi dữ liệu môn học và giáo viên được tải xong.");
+        return;
+      }
+
       if (
         this.dragData.dayId === day.id &&
         this.dragData.sessionType === session.type &&
         this.dragData.period === period &&
         this.dragData.classId === cls.id
       ) {
-        // Hiển thị thông báo lỗi
-        this.errorMessage = "Không thể kéo và thả vào chính ô này";
         $(this.$refs.errorModal_1).modal("show");
         return;
       }
 
-      // Không cho phép đổi giữa các lớp khác nhau
       if (this.dragData.classId !== cls.id) {
-        this.errorMessage = "Không thể đổi tiết giữa các lớp khác nhau";
         $(this.$refs.errorModal_2).modal("show");
         return;
       }
 
-      // Lấy thông tin tiết học tại vị trí drop
       const targetLesson = this.getLesson(day, session, period, cls);
       this.swapData = {
-        from: {
-          ...this.dragData,
-        },
+        from: { ...this.dragData },
         to: targetLesson
           ? {
               dayId: day.id,
@@ -702,78 +631,59 @@ export default {
 
       $(this.$refs.swapModal).modal("show");
     },
-
+    handleDragStart(day, session, period, cls) {
+      const lesson = this.getLesson(day, session, period, cls);
+      if (lesson) {
+        this.dragData = {
+          dayId: day.id,
+          sessionType: session.type,
+          period: period,
+          classId: cls.id,
+          lessonId: lesson.id,
+          subjectId: lesson.subjectId,
+          teacherId: lesson.teacherId,
+          subjectName: this.getSubjectNameById(lesson.subjectId),
+          teacherName: this.teachers.find((t) => t.id === lesson.teacherId)?.name || "",
+        };
+      } else {
+        this.dragData = null;
+      }
+    },
+    confirmSwap() {
+      fetch("/api/swap_schedule.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: this.swapData.from,
+          to: this.swapData.to,
+        }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            this.fetchSchedule(this.swapData.from.classId); // ← Cập nhật lại TKB sau khi đổi
+            this.cancelSwap(); // ← Đóng modal
+          } else {
+            alert("Đổi tiết thất bại: " + data.message);
+          }
+        });
+    },
     cancelSwap() {
       this.swapData = null;
       $(this.$refs.swapModal).modal("hide");
     },
-
-    confirmSwap() {
-      // Tìm index của các tiết học
-      const fromIndex = this.schedule.findIndex(
-        (item) => item.id === this.swapData.from.lessonId
-      );
-
-      const toIndex = this.schedule.findIndex(
-        (item) => item.id === (this.swapData.to.lessonId || -1)
-      );
-
-      // Tạo bản sao của mảng để đảm bảo reactivity
-      const newSchedule = [...this.schedule];
-
-      if (fromIndex !== -1) {
-        if (toIndex !== -1) {
-          // Trường hợp 1: Hoán đổi 2 tiết học có sẵn
-          // Tạo bản sao các tiết học
-          const fromLesson = { ...newSchedule[fromIndex] };
-          const toLesson = { ...newSchedule[toIndex] };
-
-          // Giữ nguyên ID của mỗi tiết học, chỉ hoán đổi nội dung
-          newSchedule[fromIndex] = {
-            ...toLesson,
-            id: fromLesson.id, // Giữ nguyên ID gốc
-            dayId: fromLesson.dayId,
-            sessionType: fromLesson.sessionType,
-            period: fromLesson.period,
-            classId: fromLesson.classId,
-          };
-
-          newSchedule[toIndex] = {
-            ...fromLesson,
-            id: toLesson.id, // Giữ nguyên ID gốc
-            dayId: toLesson.dayId,
-            sessionType: toLesson.sessionType,
-            period: toLesson.period,
-            classId: toLesson.classId,
-          };
-        } else {
-          // Trường hợp 2: Di chuyển tiết học sang ô trống
-          newSchedule[fromIndex] = {
-            ...newSchedule[fromIndex],
-            dayId: this.swapData.to.dayId,
-            sessionType: this.swapData.to.sessionType,
-            period: this.swapData.to.period,
-          };
+  },
+  watch: {
+    selectedClass: {
+      deep: true,
+      handler(val) {
+        const gradeId = Object.keys(val)[0];
+        const classId = val[gradeId];
+        if (classId) {
+          this.fetchClasses(parseInt(gradeId));
+          this.fetchSchedule(classId);
         }
-
-        // Cập nhật lại schedule
-        this.schedule = newSchedule;
-      }
-
-      this.cancelSwap();
-      this.$forceUpdate(); // Đảm bảo UI cập nhật
-    },
-
-    getScheduleByTeacher(teacherId) {
-      return this.schedule.filter((item) => item.teacherId === teacherId);
-    },
-    isHighlight(item, swapInfo) {
-      return (
-        item.dayId === swapInfo.dayId &&
-        item.period === swapInfo.period &&
-        item.classId === swapInfo.classId &&
-        item.subjectId === swapInfo.subjectId
-      );
+      },
     },
   },
 };
